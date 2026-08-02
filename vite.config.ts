@@ -4,12 +4,15 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  // Performance optimizations
   build: {
-    // Enable code splitting
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    target: 'es2018',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -18,18 +21,13 @@ export default defineConfig({
         },
       },
     },
-    // Optimize chunk size
     chunkSizeWarningLimit: 1000,
-    // Enable minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    // esbuild minify (no extra terser dependency on Hostinger CI / local)
+    minify: 'esbuild',
   },
-  // Enable compression + proxy payment API in local dev
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   server: {
     compress: true,
     proxy: {
@@ -39,7 +37,10 @@ export default defineConfig({
       },
     },
   },
-  // Optimize CSS
+  preview: {
+    port: 4173,
+    host: true,
+  },
   css: {
     devSourcemap: false,
   },

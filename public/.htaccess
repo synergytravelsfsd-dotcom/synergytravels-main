@@ -1,0 +1,48 @@
+# Synergy Travels & Tour — Hostinger (Apache) production rules
+# Upload the contents of `dist/` into public_html (this file is included automatically).
+
+Options -MultiViews
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Force www
+RewriteCond %{HTTP_HOST} ^synergytravelsandtour\.com$ [NC]
+RewriteRule ^ https://www.synergytravelsandtour.com%{REQUEST_URI} [L,R=301]
+
+# Security headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# Cache static assets aggressively
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# SPA fallback — serve index.html for non-file routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+
+# Block hidden / env files
+<FilesMatch "(^\.env|^\.git|package\.json|package-lock\.json)">
+  Require all denied
+</FilesMatch>
