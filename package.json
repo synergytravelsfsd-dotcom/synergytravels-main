@@ -9,6 +9,7 @@
     "dev:all": "npm run payments & npm run dev",
     "build": "vite build",
     "build:hostinger": "node scripts/prepare-hostinger.mjs",
+    "check:dns": "node scripts/check-live-dns.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "npm --prefix server install --no-fund --no-audit"

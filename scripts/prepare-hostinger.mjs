@@ -37,22 +37,34 @@ mkdirSync(outDir, { recursive: true });
 
 execSync(`cp -R "${dist}/." "${outDir}/"`, { stdio: 'inherit' });
 
-const readme = `Synergy Travels & Tour — Hostinger upload pack
-==============================================
+const readme = `Synergy Travels & Tour — Hostnext upload pack
+===========================================
 
 Domain: https://www.synergytravelsandtour.com
+Hosting IP (confirmed): 5.9.80.16
 
-1. In Hostinger hPanel → Domains → point www.synergytravelsandtour.com
-   to this hosting account (A record / nameservers as Hostinger shows).
-2. Enable free SSL (Let's Encrypt) for the domain.
-3. Open File Manager → public_html
-4. Delete default Hostinger placeholder files (index.html, etc.)
-5. Upload EVERYTHING inside this folder into public_html
-   (index.html, assets/, .htaccess, robots.txt, sitemap.xml, logo.png, …)
-6. Visit https://www.synergytravelsandtour.com and hard-refresh.
+UPLOAD (if not done)
+1. File Manager → public_html
+2. Upload EVERYTHING in this folder (index.html, assets/, .htaccess, …)
+   NOT inside a nested hostinger-deploy folder.
 
-Payments API (Stripe/PayPal) is optional and runs separately (Node).
-Set VITE_PAYMENTS_API_URL if you host the API elsewhere.
+CRITICAL — DNS (this is why the old site still shows)
+Nameservers are already ns1/ns2.hostnext.net, but records still point to Netlify.
+
+In Hostnext → Domains → DNS Zone Editor for synergytravelsandtour.com:
+
+  DELETE:
+    A      @     75.2.60.5
+    CNAME  www   synergytravel1.netlify.app
+
+  ADD / SET:
+    A      @     5.9.80.16
+    A      www   5.9.80.16
+
+Save, wait for DNS, then open https://www.synergytravelsandtour.com
+(hard refresh). New site is already on the Hostnext server.
+
+Verify anytime: npm run check:dns
 `;
 
 writeFileSync(join(outDir, 'HOSTINGER-UPLOAD.txt'), readme);

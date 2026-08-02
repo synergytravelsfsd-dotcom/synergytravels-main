@@ -4,13 +4,14 @@
 Options -MultiViews
 RewriteEngine On
 
-# Force HTTPS
+# Force HTTPS (keep hostname — do NOT bounce apex↔www)
+# Old "force www" caused a loop while www DNS was still cached on Netlify.
 RewriteCond %{HTTPS} !=on
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Force www
-RewriteCond %{HTTP_HOST} ^synergytravelsandtour\.com$ [NC]
-RewriteRule ^ https://www.synergytravelsandtour.com%{REQUEST_URI} [L,R=301]
+# Prefer apex while www caches clear: www → non-www on THIS host only
+RewriteCond %{HTTP_HOST} ^www\.synergytravelsandtour\.com$ [NC]
+RewriteRule ^ https://synergytravelsandtour.com%{REQUEST_URI} [L,R=301]
 
 # Security headers
 <IfModule mod_headers.c>
@@ -18,6 +19,15 @@ RewriteRule ^ https://www.synergytravelsandtour.com%{REQUEST_URI} [L,R=301]
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
   Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# Never cache HTML (prevents old site stuck in browser)
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
 </IfModule>
 
 # Cache static assets aggressively

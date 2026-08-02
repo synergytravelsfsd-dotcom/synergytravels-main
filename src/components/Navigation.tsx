@@ -62,29 +62,29 @@ const Navigation: React.FC<NavigationProps> = ({
   return (
     <nav className={`fixed w-full bg-white/95 backdrop-blur-lg border-b border-gray-200/50 z-50 shadow-lg ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`flex items-center justify-between h-24 sm:h-28 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center justify-between h-16 sm:h-20 md:h-24 lg:h-28 gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {/* Logo */}
-          <div className={`flex items-center shrink-0 ${isRTL ? 'space-x-reverse' : ''}`}>
+          <div className={`flex items-center shrink-0 min-w-0 ${isRTL ? 'space-x-reverse' : ''}`}>
             <button 
               onClick={handleLogoClick}
-              className="hover:opacity-90 transition-opacity focus:outline-none rounded-lg py-1"
+              className="hover:opacity-90 transition-opacity focus:outline-none rounded-lg py-1 max-w-full"
               aria-label="Go to home page"
             >
               <img 
                 src={logoImg} 
                 alt="Synergy Travels & Tour" 
-                className="h-14 w-auto max-w-[210px] sm:h-[4.5rem] sm:max-w-[280px] md:h-20 md:max-w-[320px] lg:h-[5.5rem] lg:max-w-[380px] object-contain object-left hover:scale-[1.03] transition-transform"
+                className="h-10 w-auto max-w-[140px] xs:max-w-[170px] sm:h-14 sm:max-w-[220px] md:h-16 md:max-w-[260px] lg:h-20 lg:max-w-[320px] xl:h-[5.5rem] xl:max-w-[380px] object-contain object-left hover:scale-[1.03] transition-transform"
               />
             </button>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className={`hidden lg:flex items-center gap-x-4 xl:gap-x-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          {/* Laptop / desktop Navigation */}
+          <div className={`hidden xl:flex items-center gap-x-3 2xl:gap-x-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavItemClick(item.id)}
-                className={`text-xs xl:text-sm font-medium transition-all duration-200 relative group whitespace-nowrap ${
+                className={`text-xs 2xl:text-sm font-medium transition-all duration-200 relative group whitespace-nowrap ${
                   currentPage === item.id
                     ? 'text-blue-600'
                     : 'text-gray-700 hover:text-blue-600'
@@ -99,23 +99,23 @@ const Navigation: React.FC<NavigationProps> = ({
             ))}
           </div>
 
-          {/* Language & Currency Selectors */}
-          <div className={`hidden md:flex items-center space-x-4 ${isRTL ? 'space-x-reverse' : ''}`}>
+          {/* Language & Currency Selectors (laptop+) */}
+          <div className={`hidden lg:flex items-center space-x-2 xl:space-x-4 ${isRTL ? 'space-x-reverse' : ''}`}>
             <button
               type="button"
               onClick={() => handleNavItemClick('compare')}
-              className="lg:hidden px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 rounded-lg"
+              className="xl:hidden px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 rounded-lg tap-target"
             >
               {t('nav.compare')}
             </button>
             <button
               type="button"
               onClick={openCart}
-              className="relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-orange-600 transition-colors rounded-lg hover:bg-orange-50"
+              className="relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-orange-600 transition-colors rounded-lg hover:bg-orange-50 tap-target"
               aria-label="Open trip cart"
             >
               <ShoppingCart className="h-5 w-5" />
-              <span>Cart</span>
+              <span className="hidden xl:inline">Cart</span>
               {itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-orange-600 text-white text-[11px] font-bold flex items-center justify-center">
                   {itemCount}
@@ -206,12 +206,12 @@ const Navigation: React.FC<NavigationProps> = ({
             </div>
           </div>
 
-          {/* Tablet/Mobile Cart + Menu */}
-          <div className="lg:hidden flex items-center gap-2">
+          {/* Mobile / laptop hamburger */}
+          <div className="xl:hidden flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={toggleCart}
-              className="relative p-2 text-gray-700 hover:text-orange-600 md:hidden"
+              className="relative p-2.5 text-gray-700 hover:text-orange-600 tap-target lg:hidden"
               aria-label="Open trip cart"
             >
               <ShoppingCart className="h-6 w-6" />
@@ -223,7 +223,7 @@ const Navigation: React.FC<NavigationProps> = ({
             </button>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-blue-600 p-2"
+              className="text-gray-700 hover:text-blue-600 p-2.5 tap-target"
               aria-label="Toggle mobile menu"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -232,15 +232,15 @@ const Navigation: React.FC<NavigationProps> = ({
         </div>
       </div>
 
-      {/* Mobile / tablet Menu */}
+      {/* Mobile / tablet / laptop Menu */}
       {isMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-200 animate-slide-up">
+        <div className="xl:hidden bg-white border-t border-gray-200 animate-slide-up max-h-[calc(100vh-4rem)] overflow-y-auto safe-pb">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavItemClick(item.id)}
-                className={`block w-full text-${isRTL ? 'right' : 'left'} px-3 py-2 text-base font-medium rounded-md transition-colors ${
+                className={`block w-full text-${isRTL ? 'right' : 'left'} px-3 py-3 text-base font-medium rounded-md transition-colors tap-target ${
                   currentPage === item.id
                     ? 'text-blue-600 bg-blue-50'
                     : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'

@@ -26,18 +26,18 @@ import {
 import LocationAutocomplete from '../LocationAutocomplete';
 import AiTravelAssistant from './AiTravelAssistant';
 
-const TABS: { id: SearchVertical; label: string; icon: React.ReactNode }[] = [
-  { id: 'flights', label: 'Flights', icon: <Plane className="h-4 w-4" /> },
-  { id: 'hotels', label: 'Hotels', icon: <Hotel className="h-4 w-4" /> },
-  { id: 'packages', label: 'Holiday Packages', icon: <Package className="h-4 w-4" /> },
-  { id: 'visa', label: 'Visa', icon: <CreditCard className="h-4 w-4" /> },
-  { id: 'activities', label: 'Activities', icon: <Compass className="h-4 w-4" /> },
-  { id: 'cruises', label: 'Cruises', icon: <Ship className="h-4 w-4" /> },
-  { id: 'cars', label: 'Car Rental', icon: <Car className="h-4 w-4" /> },
-  { id: 'insurance', label: 'Insurance', icon: <Shield className="h-4 w-4" /> },
-  { id: 'umrah', label: 'Umrah', icon: <Moon className="h-4 w-4" /> },
-  { id: 'hajj', label: 'Hajj', icon: <HeartHandshake className="h-4 w-4" /> },
-  { id: 'corporate', label: 'Corporate', icon: <Building2 className="h-4 w-4" /> },
+const TABS: { id: SearchVertical; label: string; short: string; icon: React.ReactNode }[] = [
+  { id: 'flights', label: 'Flights', short: 'Flights', icon: <Plane className="h-4 w-4" /> },
+  { id: 'hotels', label: 'Hotels', short: 'Hotels', icon: <Hotel className="h-4 w-4" /> },
+  { id: 'packages', label: 'Holiday Packages', short: 'Packages', icon: <Package className="h-4 w-4" /> },
+  { id: 'visa', label: 'Visa', short: 'Visa', icon: <CreditCard className="h-4 w-4" /> },
+  { id: 'activities', label: 'Activities', short: 'Activities', icon: <Compass className="h-4 w-4" /> },
+  { id: 'cruises', label: 'Cruises', short: 'Cruises', icon: <Ship className="h-4 w-4" /> },
+  { id: 'cars', label: 'Car Rental', short: 'Cars', icon: <Car className="h-4 w-4" /> },
+  { id: 'insurance', label: 'Insurance', short: 'Insurance', icon: <Shield className="h-4 w-4" /> },
+  { id: 'umrah', label: 'Umrah', short: 'Umrah', icon: <Moon className="h-4 w-4" /> },
+  { id: 'hajj', label: 'Hajj', short: 'Hajj', icon: <HeartHandshake className="h-4 w-4" /> },
+  { id: 'corporate', label: 'Corporate', short: 'Corporate', icon: <Building2 className="h-4 w-4" /> },
 ];
 
 const POPULAR = ['Dubai', 'Istanbul', 'Makkah', 'London', 'Bangkok', 'Maldives', 'Paris', 'Skardu'];
@@ -72,53 +72,54 @@ const MetaSearchHero: React.FC<MetaSearchHeroProps> = ({ onExplorePackages, embe
   return (
     <section
       className={`relative overflow-hidden bg-slate-950 text-white ${
-        embedded ? 'pt-6 pb-8' : 'pt-28 sm:pt-32 pb-16 sm:pb-20'
+        embedded ? 'pt-4 pb-6 sm:pt-6 sm:pb-8' : 'pt-20 sm:pt-24 md:pt-28 lg:pt-32 pb-10 sm:pb-16 lg:pb-20'
       }`}
     >
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(249,115,22,0.25),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(14,165,233,0.2),_transparent_50%)]" />
         <div className="absolute inset-0 opacity-30 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8 sm:mb-10">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs sm:text-sm text-orange-200 mb-4">
-            <Sparkles className="h-3.5 w-3.5" />
-            Pakistan's smartest AI travel comparison platform
+      <div className="relative max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-6 sm:mb-8 md:mb-10">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] sm:text-sm text-orange-200 mb-3 sm:mb-4 max-w-full">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Pakistan's smartest AI travel comparison platform</span>
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.05]">
+          <h1 className="text-[1.85rem] leading-tight xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight">
             Compare. Discover.
             <span className="block bg-gradient-to-r from-orange-300 via-amber-200 to-sky-300 bg-clip-text text-transparent">
               Book Smarter.
             </span>
           </h1>
-          <p className="mt-4 text-base sm:text-xl text-slate-300 max-w-3xl mx-auto">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-xl text-slate-300 max-w-3xl mx-auto px-1">
             Synergy Travels & Tour — metasearch across flights, hotels, packages, Umrah, visas and more.
             We compare partners; you book the best deal.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/10 backdrop-blur-xl shadow-2xl overflow-hidden">
-          <div className="flex gap-1 overflow-x-auto p-2 border-b border-white/10 scrollbar-thin">
+        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-white/10 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <div className="flex gap-1 overflow-x-auto p-2 border-b border-white/10 scrollbar-none snap-x">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setVertical(tab.id)}
-                className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${
+                className={`shrink-0 snap-start inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors tap-target ${
                   query.vertical === tab.id
                     ? 'bg-orange-500 text-white'
                     : 'text-slate-200 hover:bg-white/10'
                 }`}
               >
                 {tab.icon}
-                {tab.label}
+                <span className="sm:hidden">{tab.short}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="p-4 sm:p-6 bg-white text-slate-900">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-3 xs:p-4 sm:p-6 bg-white text-slate-900">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {needsOrigin && (
                 <LocationAutocomplete
                   label="Departure / From"
@@ -243,12 +244,12 @@ const MetaSearchHero: React.FC<MetaSearchHeroProps> = ({ onExplorePackages, embe
 
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
-            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <button
                 type="button"
                 onClick={() => search()}
                 disabled={loading}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white px-5 py-3.5 font-semibold disabled:opacity-60"
+                className="sm:col-span-2 lg:col-span-1 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white px-5 py-3.5 font-semibold disabled:opacity-60 tap-target order-first"
               >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                 Compare prices
@@ -256,7 +257,7 @@ const MetaSearchHero: React.FC<MetaSearchHeroProps> = ({ onExplorePackages, embe
               <button
                 type="button"
                 onClick={() => setShowAi((v) => !v)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-orange-200 text-orange-700 hover:bg-orange-50 px-5 py-3.5 font-semibold"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-orange-200 text-orange-700 hover:bg-orange-50 px-5 py-3.5 font-semibold tap-target"
               >
                 <Sparkles className="h-5 w-5" />
                 AI Trip Planner
@@ -265,7 +266,7 @@ const MetaSearchHero: React.FC<MetaSearchHeroProps> = ({ onExplorePackages, embe
                 <button
                   type="button"
                   onClick={onExplorePackages}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 px-5 py-3.5 font-semibold"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 px-5 py-3.5 font-semibold tap-target"
                 >
                   <Bus className="h-5 w-5" />
                   Our packages
@@ -275,9 +276,9 @@ const MetaSearchHero: React.FC<MetaSearchHeroProps> = ({ onExplorePackages, embe
                 <button
                   type="button"
                   onClick={() => navigateToAppPage(hubPage)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 px-5 py-3.5 font-semibold"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 px-5 py-3.5 font-semibold tap-target capitalize"
                 >
-                  Open {query.vertical} page
+                  Open {query.vertical}
                 </button>
               )}
             </div>

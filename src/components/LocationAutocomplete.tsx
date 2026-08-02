@@ -99,7 +99,7 @@ const LocationAutocomplete: React.FC<Props> = ({
           aria-expanded={open && suggestions.length > 0}
           aria-controls={listId}
           aria-autocomplete="list"
-          className={`w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent ${inputClassName}`}
+          className={`w-full rounded-xl border border-slate-200 pl-9 pr-3 py-3 sm:py-2.5 text-base sm:text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent ${inputClassName}`}
         />
       </div>
 
@@ -107,7 +107,7 @@ const LocationAutocomplete: React.FC<Props> = ({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-50 mt-1 w-full max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl"
+          className="absolute z-50 mt-1 w-full max-h-56 sm:max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl"
         >
           {suggestions.map((airport, index) => (
             <li key={airport.code}>

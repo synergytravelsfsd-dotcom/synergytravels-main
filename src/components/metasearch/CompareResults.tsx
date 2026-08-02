@@ -102,9 +102,9 @@ function OfferCard({ offer, vertical }: { offer: AffiliateOffer; vertical: Searc
           </div>
         </div>
 
-        <div className="sm:text-right shrink-0 flex sm:flex-col items-center sm:items-end justify-between gap-3">
+        <div className="sm:text-right shrink-0 flex sm:flex-col items-stretch sm:items-end justify-between gap-3 w-full sm:w-auto">
           <div>
-            <div className="text-2xl font-bold text-slate-900">
+            <div className="text-xl sm:text-2xl font-bold text-slate-900">
               {offer.currency} {offer.price.toLocaleString()}
             </div>
             <div className="text-xs text-slate-500">from partner</div>
@@ -112,7 +112,7 @@ function OfferCard({ offer, vertical }: { offer: AffiliateOffer; vertical: Searc
           <button
             type="button"
             onClick={open}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 text-sm font-semibold"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 text-sm font-semibold tap-target w-full sm:w-auto"
           >
             {isInternalDeepLink(offer.deepLink) ? 'View with Synergy' : 'Book'}
             {!isInternalDeepLink(offer.deepLink) && <ExternalLink className="h-3.5 w-3.5" />}
@@ -132,27 +132,27 @@ const CompareResults: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-28 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 pt-16 sm:pt-20 md:pt-24 lg:pt-28 pb-12 sm:pb-16">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={goHome}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-orange-600 mb-6"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-orange-600 mb-4 sm:mb-6 tap-target"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to search
         </button>
 
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
-          <div>
-            <p className="text-sm text-orange-600 font-semibold uppercase tracking-wide">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm text-orange-600 font-semibold uppercase tracking-wide">
               Price comparison
             </p>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mt-1">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mt-1 break-words">
               {query.vertical.charAt(0).toUpperCase() + query.vertical.slice(1)} to{' '}
               {query.destination || '…'}
             </h1>
-            <p className="text-slate-500 mt-1 text-sm">
+            <p className="text-slate-500 mt-1 text-xs sm:text-sm break-words">
               {query.origin ? `${query.origin} → ` : ''}
               {query.destination}
               {query.departDate ? ` · ${query.departDate}` : ''}
@@ -165,7 +165,7 @@ const CompareResults: React.FC = () => {
             type="button"
             onClick={() => search()}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 w-full md:w-auto tap-target"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Refresh compare
@@ -186,13 +186,13 @@ const CompareResults: React.FC = () => {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
           {SORTS.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setSort(s.id)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+              className={`shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors tap-target ${
                 sort === s.id
                   ? 'bg-orange-600 text-white'
                   : 'bg-white border border-slate-200 text-slate-600 hover:border-orange-200'
@@ -221,7 +221,7 @@ const CompareResults: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             <div className="lg:col-span-2 space-y-3">
               {results.cheapest && (
                 <p className="text-xs text-slate-500">
@@ -237,13 +237,15 @@ const CompareResults: React.FC = () => {
                 site. Mock rates shown until affiliate APIs are connected.
               </p>
             </div>
-            <aside className="space-y-6">
+            <aside className="space-y-4 sm:space-y-6">
               {query.vertical === 'visa' ? (
                 <VisaCheckerPanel />
               ) : (
                 <>
                   <AiTravelAssistant />
-                  <VisaCheckerPanel />
+                  <div className="hidden md:block">
+                    <VisaCheckerPanel />
+                  </div>
                 </>
               )}
             </aside>

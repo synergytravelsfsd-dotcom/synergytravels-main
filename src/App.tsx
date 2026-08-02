@@ -212,6 +212,7 @@ function App() {
   }
 
   const needsTopPad = currentPage !== 'home' && currentPage !== 'compare';
+  const topPadClass = needsTopPad ? 'pt-16 sm:pt-20 md:pt-24 lg:pt-28' : '';
   const navHighlight: string =
     currentPage === 'trip-detail' || currentPage === 'checkout'
       ? returnPage
@@ -234,7 +235,7 @@ function App() {
               onLogoClick={handleLogoClick}
             />
 
-            <div className={needsTopPad ? 'pt-28 sm:pt-32' : ''}>
+            <div className={topPadClass}>
               {paymentBanner && (
                 <div className="max-w-5xl mx-auto px-4 pt-4">
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 px-4 py-3 text-sm flex items-start justify-between gap-3">
