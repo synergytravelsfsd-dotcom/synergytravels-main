@@ -14,41 +14,40 @@ export const Footer: React.FC<FooterProps> = ({ onLogoClick }) => {
   const phoneLink = `tel:${whatsappNumber.replace(/\s/g, '')}`;
 
   const quickLinks = [
-    { name: 'About Us', pageId: 'home' },
-    { name: 'Compare Prices', pageId: 'compare' },
+    { name: 'Flights', pageId: 'flights' },
+    { name: 'Hotels', pageId: 'hotels' },
     { name: 'Travel Packages', pageId: 'packages' },
-    { name: 'Umrah', pageId: 'umrah' },
-    { name: 'Flight Booking', pageId: 'home' },
-    { name: 'Hotel Reservations', pageId: 'hotels' },
-    { name: 'Visa Services', pageId: 'visa' },
-    { name: 'Corporate Travel', pageId: 'corporate' },
+    { name: 'Tours', pageId: 'tours' },
+    { name: 'Visa Assistance', pageId: 'visa' },
     { name: 'Travel Insurance', pageId: 'insurance' },
-    { name: 'Contact Us', pageId: 'home' },
+    { name: 'Umrah', pageId: 'umrah' },
+    { name: 'Corporate Travel', pageId: 'corporate' },
+    { name: 'Contact Us', pageId: 'contact' },
   ];
 
   const destinations = [
     { name: 'Europe Tours', pageId: 'tours' },
     { name: 'Asia Adventures', pageId: 'adventure' },
-    { name: 'America Expeditions', pageId: 'tours' },
-    { name: 'Africa Safaris', pageId: 'adventure' },
-    { name: 'Australia Tours', pageId: 'tours' },
-    { name: 'Middle East', pageId: 'tours' },
     { name: 'Umrah & Hajj', pageId: 'umrah' },
     { name: 'Honeymoon Packages', pageId: 'adventure' },
   ];
 
   const services = [
-    { name: 'Flight Booking', pageId: 'home' },
+    { name: 'Flight Booking', pageId: 'flights' },
     { name: 'Hotel Booking', pageId: 'hotels' },
     { name: 'Car Rentals', pageId: 'cars' },
-    { name: 'Activities', pageId: 'activities' },
-    { name: 'Cruises', pageId: 'cruises' },
     { name: 'Travel Insurance', pageId: 'insurance' },
     { name: 'Visa Assistance', pageId: 'visa' },
-    { name: 'Hajj', pageId: 'hajj' },
     { name: 'Group Tours', pageId: 'tours' },
     { name: 'Corporate Travel', pageId: 'corporate' },
     { name: 'Adventure Tours', pageId: 'adventure' },
+  ];
+
+  const legalLinks = [
+    { name: 'Privacy Policy', pageId: 'privacy-policy' },
+    { name: 'Terms & Conditions', pageId: 'terms-and-conditions' },
+    { name: 'Cookie Policy', pageId: 'cookie-policy' },
+    { name: 'Refund & Cancellation', pageId: 'refund-cancellation' },
   ];
 
   const handleLogoClick = () => {
@@ -223,41 +222,24 @@ export const Footer: React.FC<FooterProps> = ({ onLogoClick }) => {
           </div>
           <div className="text-center sm:text-right">
             <p className="text-gray-400 text-sm">
-              © 2024 Synergy Travels & Tour. All rights reserved.
+              © {new Date().getFullYear()} Synergy Travels & Tour. All rights reserved.
             </p>
             <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-4 mt-2 justify-center sm:justify-end">
               <div className="flex items-center justify-center sm:justify-end space-x-1 text-gray-400">
                 <MessageCircle className="h-3 w-3" />
                 <span className="text-xs">WhatsApp: {whatsappNumber}</span>
               </div>
-              <div className="flex space-x-4 justify-center sm:justify-end">
-                <a
-                  href={`${whatsappLink}?text=${encodeURIComponent('Hi! I would like to know more about your Privacy Policy.')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white text-xs"
-                  aria-label="Privacy Policy"
-                >
-                  Privacy Policy
-                </a>
-                <a
-                  href={`${whatsappLink}?text=${encodeURIComponent('Hi! I would like to know more about your Terms of Service.')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white text-xs"
-                  aria-label="Terms of Service"
-                >
-                  Terms of Service
-                </a>
-                <a
-                  href={`${whatsappLink}?text=${encodeURIComponent('Hi! I would like to know more about your Cookie Policy.')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white text-xs"
-                  aria-label="Cookie Policy"
-                >
-                  Cookie Policy
-                </a>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center sm:justify-end">
+                {legalLinks.map((link) => (
+                  <button
+                    key={link.pageId}
+                    type="button"
+                    onClick={() => handleLinkClick(link.pageId)}
+                    className="text-gray-400 hover:text-white text-xs"
+                  >
+                    {link.name}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

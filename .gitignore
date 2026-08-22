@@ -13,6 +13,8 @@ dist-ssr
 *.local
 hostinger-deploy
 hostinger-deploy.zip
+hostnext-deploy
+hostnext-deploy.zip
 
 # Editor directories and files
 .vscode/*

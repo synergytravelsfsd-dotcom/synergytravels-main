@@ -25,14 +25,14 @@ const Navigation: React.FC<NavigationProps> = ({
 
   const navItems = [
     { id: 'home', label: t('nav.home') },
-    { id: 'compare', label: t('nav.compare') },
+    { id: 'flights', label: 'Flights' },
+    { id: 'hotels', label: t('nav.hotels') },
     { id: 'packages', label: t('nav.packages') },
-    { id: 'umrah', label: t('nav.umrah') },
     { id: 'tours', label: t('nav.tours') },
     { id: 'visa', label: t('nav.visa') },
-    { id: 'hotels', label: t('nav.hotels') },
-    { id: 'adventure', label: t('nav.adventure') },
-    { id: 'corporate', label: t('nav.corporate') },
+    { id: 'insurance', label: 'Insurance' },
+    { id: 'umrah', label: t('nav.umrah') },
+    { id: 'contact', label: 'Contact' },
   ];
 
   const handleLogoClick = () => {

@@ -2,18 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 import LoadingScreen from './components/LoadingScreen';
 import Navigation from './components/Navigation';
 import Services from './components/Services';
-import FlightSearch from './components/FlightSearch';
 import TravelPackages from './components/TravelPackages';
 import Tours from './components/Tours';
 import VisaServices from './components/VisaServices';
-import Hotels from './components/Hotels';
 import AdventureTours from './components/AdventureTours';
 import CorporateTravel from './components/CorporateTravel';
 import TripDetail from './components/TripDetail';
 import Checkout from './components/Checkout';
 import CartDrawer from './components/CartDrawer';
 import PaymentReturnHandler from './components/PaymentReturnHandler';
-import MetaSearchHero from './components/metasearch/MetaSearchHero';
+import ConversionHome from './components/ConversionHome';
+import FlightsPage from './components/FlightsPage';
+import HotelsEnquiryPage from './components/HotelsEnquiryPage';
+import InsurancePage from './components/InsurancePage';
+import ContactPage from './components/ContactPage';
+import LegalPage from './components/LegalPage';
 import CompareResults from './components/metasearch/CompareResults';
 import VerticalHubPage from './components/metasearch/VerticalHubPage';
 import NotFoundPage from './components/NotFoundPage';
@@ -30,6 +33,7 @@ import {
 } from './constants/pages';
 import type { SearchVertical } from './metasearch/types';
 import { useMetaSearchStore } from './metasearch/store';
+import { trackEvent } from './lib/analytics';
 
 type NavDetail =
   | string
@@ -71,13 +75,6 @@ function App() {
     }
   }, []);
 
-  const handleExplorePackages = () => {
-    setCurrentPage('packages');
-    setReturnPage('packages');
-    syncHash('packages');
-    scrollTop();
-  };
-
   const handleLogoClick = () => {
     setCurrentPage('home');
     setSelectedTripId(null);
@@ -97,13 +94,21 @@ function App() {
         return;
       }
 
-      if (resolved !== 'checkout' && resolved !== 'compare' && resolved !== 'not-found') {
+      if (
+        resolved !== 'checkout' &&
+        resolved !== 'compare' &&
+        resolved !== 'not-found' &&
+        !resolved.includes('policy') &&
+        resolved !== 'terms-and-conditions' &&
+        resolved !== 'refund-cancellation'
+      ) {
         setReturnPage(resolved);
         setSelectedTripId(null);
       }
 
       setCurrentPage(resolved);
       syncHash(resolved, resolved === 'trip-detail' ? tripId : null);
+      trackEvent('page_view', { page: resolved });
       scrollTop();
     },
     [selectedTripId, syncHash]
@@ -163,12 +168,13 @@ function App() {
       case 'home':
         return (
           <>
-            <MetaSearchHero onExplorePackages={handleExplorePackages} />
-            <FlightSearch />
+            <ConversionHome />
             <Services />
             <TravelPackages />
           </>
         );
+      case 'flights':
+        return <FlightsPage />;
       case 'compare':
         return <CompareResults />;
       case 'packages':
@@ -178,18 +184,26 @@ function App() {
       case 'visa':
         return <VisaServices />;
       case 'hotels':
-        return <Hotels />;
+        return <HotelsEnquiryPage />;
       case 'adventure':
         return <AdventureTours />;
       case 'corporate':
         return <CorporateTravel />;
+      case 'insurance':
+        return <InsurancePage />;
       case 'umrah':
       case 'hajj':
-      case 'insurance':
       case 'activities':
       case 'cars':
       case 'cruises':
         return <VerticalHubPage pageId={currentPage} />;
+      case 'contact':
+        return <ContactPage />;
+      case 'privacy-policy':
+      case 'terms-and-conditions':
+      case 'cookie-policy':
+      case 'refund-cancellation':
+        return <LegalPage pageId={currentPage} />;
       case 'trip-detail':
         return (
           <TripDetail

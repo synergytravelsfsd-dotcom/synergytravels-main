@@ -20,7 +20,7 @@ import {
 import { navigateToAppPage } from '../../constants/pages';
 import VisaCheckerPanel from './VisaCheckerPanel';
 import AiTravelAssistant from './AiTravelAssistant';
-import MetaSearchHero from './MetaSearchHero';
+import BookingEnquiryForm from '../BookingEnquiryForm';
 
 const SORTS: { id: SortMode; label: string }[] = [
   { id: 'best', label: 'Best value' },
@@ -206,23 +206,32 @@ const CompareResults: React.FC = () => {
         {loading && !results ? (
           <div className="flex items-center justify-center py-24 text-slate-500 gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
-            Comparing partners…
+            Searching…
           </div>
         ) : !results?.offers?.length ? (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-600">
-              No comparison results yet — search below to compare partner prices.
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+              <h2 className="font-bold text-lg">No live inventory connected</h2>
+              <p className="mt-2 text-sm">
+                Authorised partner APIs are not enabled yet, so we do not show simulated fares.
+                Request a quote from Synergy, or open the Flights page for partner comparison deeplinks.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigateToAppPage('flights')}
+                className="mt-4 inline-flex rounded-xl bg-orange-600 text-white px-4 py-2.5 text-sm font-semibold"
+              >
+                Go to Flights
+              </button>
             </div>
-            <div className="rounded-3xl overflow-hidden border border-slate-200">
-              <MetaSearchHero
-                embedded
-                onExplorePackages={() => navigateToAppPage('packages')}
-              />
-            </div>
+            <BookingEnquiryForm service="flights" showFlightFields heading="Book with Synergy" />
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             <div className="lg:col-span-2 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Demo mode — mock prices only (not live inventory)
+              </p>
               {results.cheapest && (
                 <p className="text-xs text-slate-500">
                   Cheapest from <strong>{results.cheapest.providerName}</strong> · Best value{' '}
@@ -233,8 +242,8 @@ const CompareResults: React.FC = () => {
                 <OfferCard key={o.id} offer={o} vertical={query.vertical} />
               ))}
               <p className="text-xs text-slate-400 pt-2">
-                Synergy Travels & Tour is a comparison platform. Booking completes on the partner
-                site. Mock rates shown until affiliate APIs are connected.
+                Demo offers must never be marketed as live fares. Connect an authorised API to show
+                real inventory.
               </p>
             </div>
             <aside className="space-y-4 sm:space-y-6">

@@ -34,18 +34,20 @@ export async function runMetaSearch(query: MetaSearchQuery): Promise<CompareResu
   const cheapest = [...offers].sort((a, b) => a.price - b.price)[0];
   const bestValue = sorted[0];
 
-  const insights = [
-    `Compared ${offers.length} live-style offers across ${new Set(offers.map((o) => o.providerId)).size} partners.`,
-    cheapest
-      ? `Lowest guide price: ${cheapest.providerName} at $${cheapest.price}.`
-      : 'No offers found — try a different destination or dates.',
-    bestValue && bestValue.id !== cheapest?.id
-      ? `Best value pick: ${bestValue.providerName} (balance of price, rating & flexibility).`
-      : 'Tip: flexible dates often unlock lower fares.',
-    query.budgetMax
-      ? `Filtered against your budget ceiling of $${query.budgetMax}.`
-      : 'Set a budget to filter smarter deals.',
-  ];
+  const insights =
+    offers.length === 0
+      ? [
+          'No live partner inventory is connected in production.',
+          'Request a quote from Synergy Travels, or open partner comparison deeplinks from the Flights page.',
+          'Demo priced results appear only when VITE_TRAVEL_DEMO_MODE=true.',
+        ]
+      : [
+          `DEMO MODE: compared ${offers.length} mock offers across ${new Set(offers.map((o) => o.providerId)).size} partners — not live inventory.`,
+          cheapest
+            ? `Lowest demo guide price: ${cheapest.providerName} at $${cheapest.price}.`
+            : 'No demo offers found — try a different destination or dates.',
+          'Never present demo prices to customers as live fares.',
+        ];
 
   const filtered = query.budgetMax
     ? sorted.filter((o) => o.price <= (query.budgetMax || Infinity))

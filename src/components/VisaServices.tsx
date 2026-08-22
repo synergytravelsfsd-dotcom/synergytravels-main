@@ -152,7 +152,7 @@ const VisaServices: React.FC = () => {
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-6">
             Hassle-free visa processing and complete documentation assistance for all your travel needs. 
-            Our expert team ensures smooth and fast processing with guaranteed success rates.
+            Document preparation support and application guidance — immigration decisions rest with the relevant authority.
           </p>
           
           <div className="flex flex-col items-center justify-center gap-3 mb-8">
@@ -328,7 +328,7 @@ const VisaServices: React.FC = () => {
                   <ContactChoice
                     fullWidth
                     variant="orange"
-                    label="Apply Now"
+                    label="Request Visa Assistance"
                     subject={`Visa Application - ${visa.country} ${visa.visaType}`}
                     message={`Hi! I need help with ${visa.country} ${visa.visaType}. Can you assist me?`}
                   />

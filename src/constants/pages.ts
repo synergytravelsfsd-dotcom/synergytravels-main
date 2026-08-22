@@ -3,6 +3,7 @@ import type { SearchVertical } from '../metasearch/types';
 /** Canonical SPA page ids — every navigateToPage target must resolve here */
 export const APP_PAGES = [
   'home',
+  'flights',
   'compare',
   'packages',
   'tours',
@@ -16,6 +17,11 @@ export const APP_PAGES = [
   'activities',
   'cars',
   'cruises',
+  'contact',
+  'privacy-policy',
+  'terms-and-conditions',
+  'cookie-policy',
+  'refund-cancellation',
   'trip-detail',
   'checkout',
   'not-found',
@@ -41,7 +47,7 @@ export const VERTICAL_PAGE: Partial<Record<SearchVertical, AppPage>> = {
   activities: 'activities',
   cars: 'cars',
   cruises: 'cruises',
-  flights: 'home',
+  flights: 'flights',
 };
 
 /** Synergy-owned offers book into these internal pages */
@@ -55,7 +61,7 @@ export const SYNERGY_BOOK_PAGE: Partial<Record<SearchVertical, AppPage>> = {
   cruises: 'cruises',
   hotels: 'hotels',
   activities: 'tours',
-  flights: 'home',
+  flights: 'flights',
   cars: 'cars',
 };
 
@@ -65,9 +71,9 @@ export function resolveNavigateTarget(raw: string): AppPage {
   if (isAppPage(normalized)) return normalized;
 
   const aliases: Record<string, AppPage> = {
-    flight: 'home',
-    flights: 'home',
-    'flight-booking': 'home',
+    flight: 'flights',
+    flights: 'flights',
+    'flight-booking': 'flights',
     package: 'packages',
     'travel-packages': 'packages',
     tour: 'tours',
@@ -83,10 +89,15 @@ export function resolveNavigateTarget(raw: string): AppPage {
     cruise: 'cruises',
     religious: 'umrah',
     'umrah-packages': 'umrah',
-    contact: 'home',
-    about: 'home',
+    contact: 'contact',
+    about: 'contact',
     compare: 'compare',
     metasearch: 'compare',
+    privacy: 'privacy-policy',
+    terms: 'terms-and-conditions',
+    cookies: 'cookie-policy',
+    refund: 'refund-cancellation',
+    cancellation: 'refund-cancellation',
   };
 
   return aliases[normalized] || 'not-found';
