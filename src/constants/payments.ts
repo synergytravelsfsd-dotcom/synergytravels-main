@@ -69,7 +69,7 @@ export async function fetchPaymentsConfig(): Promise<PaymentsConfig> {
     return await api<PaymentsConfig>('/api/payments/config');
   } catch {
     return {
-      currency: 'usd',
+      currency: 'gbp',
       stripeEnabled: false,
       stripePublishableKey: '',
       paypalEnabled: false,

@@ -12,7 +12,7 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = Number(process.env.PAYMENT_PORT || 4242);
 const CLIENT_URL = process.env.CLIENT_URL || 'http://127.0.0.1:5173';
-const CURRENCY = (process.env.PAYMENT_CURRENCY || 'usd').toLowerCase();
+const CURRENCY = (process.env.PAYMENT_CURRENCY || 'gbp').toLowerCase();
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY || '';
 const stripe = stripeSecret ? new Stripe(stripeSecret) : null;
