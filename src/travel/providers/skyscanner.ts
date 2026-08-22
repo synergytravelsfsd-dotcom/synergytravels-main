@@ -15,8 +15,14 @@ export const skyscannerProvider: TravelProvider = {
       to: input.destination,
       departure: input.departDate,
       returnDate: input.returnDate,
-      passengers: input.adults,
-      tripType: input.tripType === 'roundtrip' ? 'roundtrip' : 'oneway',
+      passengers: input.adults + (input.children || 0) + (input.infants || 0),
+      tripType:
+        input.tripType === 'multicity'
+          ? 'multicity'
+          : input.tripType === 'roundtrip'
+            ? 'roundtrip'
+            : 'oneway',
+      segments: input.segments,
     });
     if (affiliate) {
       href += (href.includes('?') ? '&' : '?') + `associateid=${encodeURIComponent(affiliate)}`;

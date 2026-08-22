@@ -1,7 +1,13 @@
 /** Shared travel search types for provider adapters */
 
 export type CabinClass = 'economy' | 'premium' | 'business' | 'first';
-export type TripType = 'oneway' | 'roundtrip';
+export type TripType = 'oneway' | 'roundtrip' | 'multicity';
+
+export type FlightSegmentInput = {
+  from: string;
+  to: string;
+  date: string;
+};
 
 export type FlightSearchInput = {
   origin: string;
@@ -10,8 +16,10 @@ export type FlightSearchInput = {
   returnDate?: string;
   adults: number;
   children?: number;
+  infants?: number;
   cabin: CabinClass;
   tripType: TripType;
+  segments?: FlightSegmentInput[];
 };
 
 export type HotelSearchInput = {

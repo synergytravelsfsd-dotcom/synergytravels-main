@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle2, Mail, MessageCircle, Send } from 'lucide-react';
 import { BRAND_NAME, CONTACT, getEmailLink, getWhatsAppLink } from '../constants/contact';
 import { trackEvent, type AnalyticsEvent } from '../lib/analytics';
+import type { TripType } from '../travel/types';
 
 export type EnquiryService =
   | 'flights'
@@ -12,11 +13,27 @@ export type EnquiryService =
   | 'cars'
   | 'general';
 
+export type FlightEnquiryInitialValues = {
+  tripType?: TripType;
+  origin?: string;
+  destination?: string;
+  departDate?: string;
+  returnDate?: string;
+  adults?: string;
+  children?: string;
+  infants?: string;
+  cabin?: string;
+  preferredAirline?: string;
+  multiCitySummary?: string;
+  message?: string;
+};
+
 type BookingEnquiryFormProps = {
   service?: EnquiryService;
   heading?: string;
   analyticsEvent?: AnalyticsEvent;
   defaultMessage?: string;
+  initialValues?: FlightEnquiryInitialValues;
   showFlightFields?: boolean;
   showHotelFields?: boolean;
   className?: string;
@@ -29,6 +46,7 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
   heading = 'Request booking assistance',
   analyticsEvent = 'booking_request',
   defaultMessage = '',
+  initialValues,
   showFlightFields = service === 'flights',
   showHotelFields = service === 'hotels',
   className = '',
@@ -37,19 +55,23 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
     fullName: '',
     email: '',
     phone: '',
-    origin: '',
-    destination: '',
-    departDate: '',
-    returnDate: '',
-    travellers: '1',
-    cabin: 'Economy',
-    preferredAirline: '',
+    tripType: (initialValues?.tripType || 'roundtrip') as TripType,
+    origin: initialValues?.origin || '',
+    destination: initialValues?.destination || '',
+    departDate: initialValues?.departDate || '',
+    returnDate: initialValues?.returnDate || '',
+    adults: initialValues?.adults || '1',
+    children: initialValues?.children || '0',
+    infants: initialValues?.infants || '0',
+    cabin: initialValues?.cabin || 'Economy',
+    preferredAirline: initialValues?.preferredAirline || '',
+    multiCitySummary: initialValues?.multiCitySummary || '',
     checkIn: '',
     checkOut: '',
     guests: '2',
     rooms: '1',
     specialRequirements: '',
-    message: defaultMessage,
+    message: initialValues?.message || defaultMessage,
   });
   const [submitted, setSubmitted] = useState(false);
 
@@ -59,6 +81,13 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const tripTypeLabel =
+    form.tripType === 'multicity'
+      ? 'Multi-city'
+      : form.tripType === 'oneway'
+        ? 'One-way'
+        : 'Round-trip';
+
   const buildBody = () => {
     const lines = [
       `${service.toUpperCase()} enquiry — ${BRAND_NAME}`,
@@ -67,12 +96,21 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
       `Phone / WhatsApp: ${form.phone}`,
     ];
     if (showFlightFields) {
+      lines.push(`Trip type: ${tripTypeLabel}`);
+      if (form.tripType === 'multicity' && form.multiCitySummary.trim()) {
+        lines.push('Multi-city legs:', form.multiCitySummary);
+      } else {
+        lines.push(
+          `From: ${form.origin}`,
+          `To: ${form.destination}`,
+          `Departure: ${form.departDate}`,
+          `Return: ${form.tripType === 'oneway' ? 'One-way' : form.returnDate || 'Not set'}`
+        );
+      }
       lines.push(
-        `From: ${form.origin}`,
-        `To: ${form.destination}`,
-        `Departure: ${form.departDate}`,
-        `Return: ${form.returnDate || 'One-way'}`,
-        `Travellers: ${form.travellers}`,
+        `Adults (12+): ${form.adults}`,
+        `Children (2–11): ${form.children}`,
+        `Infants (under 2): ${form.infants}`,
         `Cabin: ${form.cabin}`,
         `Preferred airline: ${form.preferredAirline || 'Any'}`
       );
@@ -98,6 +136,16 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
   const validate = () => {
     if (!form.fullName.trim() || !form.email.trim() || !form.phone.trim()) {
       alert('Please enter your full name, email and phone / WhatsApp number.');
+      return false;
+    }
+    const adultsN = Number(form.adults) || 0;
+    const infantsN = Number(form.infants) || 0;
+    if (showFlightFields && adultsN < 1) {
+      alert('At least one adult is required.');
+      return false;
+    }
+    if (showFlightFields && infantsN > adultsN) {
+      alert('Infants cannot exceed the number of adults.');
       return false;
     }
     return true;
@@ -187,25 +235,66 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
 
         {showFlightFields && (
           <>
+            <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-slate-700">Trip type</span>
+              <select
+                name="tripType"
+                value={form.tripType}
+                onChange={onChange}
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              >
+                <option value="roundtrip">Round-trip</option>
+                <option value="oneway">One-way</option>
+                <option value="multicity">Multi-city</option>
+              </select>
+            </label>
+
+            {form.tripType === 'multicity' ? (
+              <label className="block text-sm sm:col-span-2">
+                <span className="font-medium text-slate-700">Multi-city legs</span>
+                <textarea
+                  name="multiCitySummary"
+                  rows={4}
+                  value={form.multiCitySummary}
+                  onChange={onChange}
+                  placeholder={'Leg 1: London (LHR) → Dubai (DXB) on 2026-10-20\nLeg 2: Dubai (DXB) → Lahore (LHE) on 2026-10-22'}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+                />
+              </label>
+            ) : (
+              <>
+                <label className="block text-sm">
+                  <span className="font-medium text-slate-700">Departure airport</span>
+                  <input name="origin" value={form.origin} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" placeholder="e.g. London Heathrow (LHR)" />
+                </label>
+                <label className="block text-sm">
+                  <span className="font-medium text-slate-700">Destination</span>
+                  <input name="destination" value={form.destination} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+                </label>
+                <label className="block text-sm">
+                  <span className="font-medium text-slate-700">Departure date</span>
+                  <input type="date" name="departDate" value={form.departDate} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+                </label>
+                {form.tripType === 'roundtrip' && (
+                  <label className="block text-sm">
+                    <span className="font-medium text-slate-700">Return date</span>
+                    <input type="date" name="returnDate" value={form.returnDate} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+                  </label>
+                )}
+              </>
+            )}
+
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Departure airport</span>
-              <input name="origin" value={form.origin} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" placeholder="e.g. London Heathrow (LHR)" />
+              <span className="font-medium text-slate-700">Adults (12+)</span>
+              <input type="number" min={1} max={9} name="adults" value={form.adults} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
             </label>
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Destination</span>
-              <input name="destination" value={form.destination} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+              <span className="font-medium text-slate-700">Children (2–11)</span>
+              <input type="number" min={0} max={9} name="children" value={form.children} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
             </label>
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Departure date</span>
-              <input type="date" name="departDate" value={form.departDate} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-slate-700">Return date</span>
-              <input type="date" name="returnDate" value={form.returnDate} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-slate-700">Travellers</span>
-              <input type="number" min={1} name="travellers" value={form.travellers} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+              <span className="font-medium text-slate-700">Infants (under 2)</span>
+              <input type="number" min={0} max={9} name="infants" value={form.infants} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
             </label>
             <label className="block text-sm">
               <span className="font-medium text-slate-700">Cabin class</span>
