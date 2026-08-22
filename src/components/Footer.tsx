@@ -100,13 +100,13 @@ export const Footer: React.FC<FooterProps> = ({ onLogoClick }) => {
               <div className="flex items-start space-x-2 text-gray-300">
                 <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
                 <a
-                  href="https://maps.google.com/?q=Watford,+Hertfordshire,+UK"
+                  href="https://maps.google.com/?q=Dubai,+United+Arab+Emirates"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm hover:text-white transition-colors"
                   aria-label="Open location in Google Maps"
                 >
-                  Watford, Hertfordshire, UK
+                  Dubai, United Arab Emirates
                 </a>
               </div>
               <div className="flex items-center space-x-2 text-gray-300">

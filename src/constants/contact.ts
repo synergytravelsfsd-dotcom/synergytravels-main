@@ -1,8 +1,8 @@
 export const BRAND_NAME = 'Synergy Travels & Tour';
 
 export const CONTACT = {
-  phone: '+44 7466441212',
-  phoneDigits: '447466441212',
+  phone: '+971 561052203',
+  phoneDigits: '971561052203',
   email: 'info@synergytravelsandtour.com',
 } as const;
 

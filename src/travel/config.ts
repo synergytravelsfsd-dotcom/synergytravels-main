@@ -31,8 +31,8 @@ export function isProviderApiConfigured(): boolean {
 }
 
 export const TRAVEL_LOCATION = {
-  town: 'Watford',
-  region: 'Hertfordshire',
-  country: 'UK',
-  label: 'Watford, Hertfordshire, UK',
+  town: 'Dubai',
+  region: 'Dubai',
+  country: 'United Arab Emirates',
+  label: 'Dubai, United Arab Emirates',
 } as const;

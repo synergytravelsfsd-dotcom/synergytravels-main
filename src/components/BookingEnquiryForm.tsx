@@ -230,7 +230,7 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
         </label>
         <label className="block text-sm sm:col-span-2">
           <span className="font-medium text-slate-700">Phone / WhatsApp *</span>
-          <input name="phone" value={form.phone} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" placeholder="+44…" />
+          <input name="phone" value={form.phone} onChange={onChange} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5" placeholder="+971…" />
         </label>
 
         {showFlightFields && (

@@ -172,7 +172,7 @@ const TripInquiryForm: React.FC<TripInquiryFormProps> = ({
               name="phone"
               value={form.phone}
               onChange={onChange}
-              placeholder="+44 ..."
+              placeholder="+971 ..."
               required
               className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
