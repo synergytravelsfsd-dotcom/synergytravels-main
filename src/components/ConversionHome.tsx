@@ -5,6 +5,7 @@ import {
   Map,
   CreditCard,
   Shield,
+  Car,
   MessageCircle,
   Search,
   ExternalLink,
@@ -18,13 +19,14 @@ import { getWhatsAppLink } from '../constants/contact';
 import { trackEvent } from '../lib/analytics';
 import { TRAVEL_LOCATION } from '../travel/config';
 
-type TabId = 'flights' | 'hotels' | 'tours' | 'visa' | 'insurance';
+type TabId = 'flights' | 'hotels' | 'tours' | 'visa' | 'transfers' | 'insurance';
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'flights', label: 'Flights', icon: <Plane className="h-4 w-4" /> },
   { id: 'hotels', label: 'Hotels', icon: <Hotel className="h-4 w-4" /> },
   { id: 'tours', label: 'Tours', icon: <Map className="h-4 w-4" /> },
   { id: 'visa', label: 'Visa Services', icon: <CreditCard className="h-4 w-4" /> },
+  { id: 'transfers', label: 'Transfers', icon: <Car className="h-4 w-4" /> },
   { id: 'insurance', label: 'Travel Insurance', icon: <Shield className="h-4 w-4" /> },
 ];
 
@@ -104,6 +106,11 @@ const ConversionHome: React.FC = () => {
       navigateToAppPage('visa');
       return;
     }
+    if (tab === 'transfers') {
+      trackEvent('booking_request', { source: 'home_transfers' });
+      setShowEnquiry(true);
+      return;
+    }
     trackEvent('insurance_enquiry');
     navigateToAppPage('insurance');
   };
@@ -121,10 +128,10 @@ const ConversionHome: React.FC = () => {
               SYNERGY TRAVELS &amp; TOURS
             </p>
             <h1 className="mt-3 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">
-              Your Journey Starts Here
+              Where do you want to go?
             </h1>
             <p className="mt-4 text-base sm:text-xl text-slate-300">
-              Flights, hotels, tours, visas and travel support from one trusted travel partner.
+              Flights, hotels, holidays, visas and travel support — search, enquire, and book with Synergy.
             </p>
           </div>
 
@@ -225,10 +232,11 @@ const ConversionHome: React.FC = () => {
                 </div>
               )}
 
-              {(tab === 'tours' || tab === 'visa' || tab === 'insurance') && (
+              {(tab === 'tours' || tab === 'visa' || tab === 'transfers' || tab === 'insurance') && (
                 <p className="text-slate-600 text-sm sm:text-base mb-2">
                   {tab === 'tours' && 'Explore holiday packages and request a tailored itinerary from Synergy.'}
                   {tab === 'visa' && 'Get document preparation support and application guidance — no immigration guarantees.'}
+                  {tab === 'transfers' && 'Request airport transfers and ground transport — our team will confirm options and pricing.'}
                   {tab === 'insurance' && 'Request travel insurance options through Synergy. Prices shown only when an authorised provider is connected.'}
                 </p>
               )}
@@ -245,6 +253,7 @@ const ConversionHome: React.FC = () => {
                   {tab === 'hotels' && 'Search Hotels'}
                   {tab === 'tours' && 'Explore Tours'}
                   {tab === 'visa' && 'Visa Assistance'}
+                  {tab === 'transfers' && 'Request Transfer'}
                   {tab === 'insurance' && 'Request Insurance'}
                 </button>
                 <button
@@ -299,7 +308,19 @@ const ConversionHome: React.FC = () => {
       {showEnquiry && (
         <section className="max-w-3xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-8 relative z-10 pb-8">
           <BookingEnquiryForm
-            service={tab === 'visa' ? 'visa' : tab === 'insurance' ? 'insurance' : tab === 'hotels' ? 'hotels' : tab === 'tours' ? 'tours' : 'flights'}
+            service={
+              tab === 'visa'
+                ? 'visa'
+                : tab === 'insurance'
+                  ? 'insurance'
+                  : tab === 'hotels'
+                    ? 'hotels'
+                    : tab === 'tours'
+                      ? 'tours'
+                      : tab === 'transfers'
+                        ? 'transfers'
+                        : 'flights'
+            }
             showFlightFields={tab === 'flights'}
             showHotelFields={tab === 'hotels'}
             analyticsEvent={
@@ -320,20 +341,26 @@ const ConversionHome: React.FC = () => {
       <section className="py-14 sm:py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Travel with a trusted partner</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">What can we help you with?</h2>
             <p className="mt-3 text-slate-600">
-              Synergy Travels &amp; Tour helps travellers with flight booking, hotels, holiday packages,
-              visa assistance and travel support. Based in {TRAVEL_LOCATION.label}.
+              Synergy Travels &amp; Tour — based in {TRAVEL_LOCATION.label}. Request a quote; we follow up on
+              WhatsApp, phone or email.
             </p>
           </div>
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { title: 'Flight booking', text: 'Request quotes and book with personal assistance from our team.', page: 'flights' },
-              { title: 'Hotels & stays', text: 'Tell us where you are going — we arrange suitable options.', page: 'hotels' },
-              { title: 'Tours & packages', text: 'Explore curated holidays and request a tailored itinerary.', page: 'tours' },
-              { title: 'Visa assistance', text: 'Document preparation support and application guidance.', page: 'visa' },
-              { title: 'Travel insurance', text: 'Request cover options for your trip through Synergy.', page: 'insurance' },
-              { title: 'WhatsApp support', text: 'Chat with us for fast answers on quotes and planning.', page: 'contact' },
+              { title: 'Flights', text: 'Search routes and request a Synergy flight quote.', page: 'flights', cta: 'Search Flights' },
+              { title: 'Hotels', text: 'Tell us dates and city — we arrange stays.', page: 'hotels', cta: 'Find Hotels' },
+              { title: 'Holiday Packages', text: 'Curated tours and tailor-made itineraries.', page: 'packages', cta: 'Plan My Trip' },
+              { title: 'Visa Assistance', text: 'Document preparation and application guidance.', page: 'visa', cta: 'Apply for Visa' },
+              { title: 'Airport Transfers', text: 'Request transfers and ground support.', page: 'cars', cta: 'Get a Quote' },
+              { title: 'Travel Insurance', text: 'Ask for cover options for your trip.', page: 'insurance', cta: 'Get a Quote' },
+              { title: 'Corporate Travel', text: 'Business travel support for teams.', page: 'corporate', cta: 'Get a Quote' },
+              { title: 'Umrah / Religious Travel', text: 'Umrah and Hajj package assistance.', page: 'umrah', cta: 'Get a Quote' },
+              { title: 'Car Rental', text: 'Request car hire for your destination.', page: 'cars', cta: 'Get a Quote' },
+              { title: 'Cruises', text: 'Enquire about cruise holidays.', page: 'cruises', cta: 'Get a Quote' },
+              { title: 'Family Holidays', text: 'Family-friendly packages and planning.', page: 'tours', cta: 'Plan My Trip' },
+              { title: 'WhatsApp Us', text: 'Chat with our team for fast answers.', page: 'contact', cta: 'WhatsApp Us' },
             ].map((item) => (
               <button
                 key={item.title}
@@ -343,8 +370,52 @@ const ConversionHome: React.FC = () => {
               >
                 <h3 className="font-bold text-slate-900">{item.title}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.text}</p>
+                <span className="mt-3 inline-block text-sm font-semibold text-orange-600">{item.cta} →</span>
               </button>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-14 sm:py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-slate-900">Why Synergy?</h2>
+          <p className="mt-3 text-slate-600 max-w-3xl">
+            Professional travel assistance for flights, hotels, packages and visa guidance — with human
+            support on WhatsApp. We do not invent awards, certifications or live fares; quotes are
+            confirmed by our team.
+          </p>
+          <div className="mt-8 grid sm:grid-cols-3 gap-6 text-sm text-slate-700">
+            <div>
+              <h3 className="font-bold text-slate-900">Trusted support</h3>
+              <p className="mt-1">Speak with Synergy consultants before you pay.</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">Clear next steps</h3>
+              <p className="mt-1">Search → enquire → quote → book with guidance.</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">Based in {TRAVEL_LOCATION.town}</h3>
+              <p className="mt-1">{TRAVEL_LOCATION.label}</p>
+            </div>
+          </div>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <a
+              href={getWhatsAppLink('Hi Synergy, I would like a quote.')}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('whatsapp_click', { context: 'home_why' })}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 font-semibold"
+            >
+              <MessageCircle className="h-5 w-5" /> WhatsApp Us
+            </a>
+            <button
+              type="button"
+              onClick={() => navigateToAppPage('contact')}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Get a Quote
+            </button>
           </div>
         </div>
       </section>

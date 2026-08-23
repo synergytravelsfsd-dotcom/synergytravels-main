@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Mail, MessageCircle, Send } from 'lucide-react';
 import { BRAND_NAME, getEmailLink, getWhatsAppLink } from '../constants/contact';
 import type { Trip } from '../data/trips';
+import { submitLead } from '../lib/leadsApi';
+import { trackEvent } from '../lib/analytics';
 
 type TripInquiryFormProps = {
   trip?: Trip;
@@ -48,6 +50,7 @@ const TripInquiryForm: React.FC<TripInquiryFormProps> = ({
       : 'I would like help choosing a package. Please contact me with options.',
   });
   const [sentHint, setSentHint] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -55,7 +58,7 @@ const TripInquiryForm: React.FC<TripInquiryFormProps> = ({
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const buildMessage = () =>
+  const buildMessage = (leadId?: string) =>
     [
       `Trip enquiry — ${BRAND_NAME}`,
       `Trip: ${form.tripName || tripTitle || 'Not specified'}`,
@@ -69,7 +72,10 @@ const TripInquiryForm: React.FC<TripInquiryFormProps> = ({
       `Subject: ${form.subject}`,
       '',
       form.message,
-    ].join('\n');
+      leadId ? `\nReference: ${leadId}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
 
   const validate = () => {
     if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
@@ -83,16 +89,49 @@ const TripInquiryForm: React.FC<TripInquiryFormProps> = ({
     return true;
   };
 
-  const sendWhatsApp = () => {
-    if (!validate()) return;
-    window.open(getWhatsAppLink(buildMessage()), '_blank', 'noopener,noreferrer');
-    setSentHint('Opening WhatsApp with your enquiry…');
-  };
+  const submitVia = async (channel: 'whatsapp' | 'email') => {
+    if (!validate() || submitting) return;
+    setSubmitting(true);
+    try {
+      const apiResult = await submitLead({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        service: 'packages',
+        channel,
+        source: 'trip_inquiry_form',
+        country: form.country,
+        adults: form.adults,
+        children: form.children,
+        message: buildMessage(),
+        page: typeof window !== 'undefined' ? window.location.hash || '/' : '/',
+        destination: form.tripName || tripTitle,
+      });
 
-  const sendEmail = () => {
-    if (!validate()) return;
-    window.location.href = getEmailLink(form.subject, buildMessage());
-    setSentHint('Opening your email app with the enquiry…');
+      trackEvent('tour_enquiry', {
+        channel,
+        trip: form.tripName || tripTitle,
+        lead_id: apiResult.lead?.id,
+      });
+      trackEvent('lead_submitted', {
+        service: 'packages',
+        channel,
+        lead_id: apiResult.lead?.id,
+      });
+
+      const body = buildMessage(apiResult.lead?.id);
+      if (channel === 'whatsapp') {
+        trackEvent('whatsapp_click', { context: 'trip_inquiry' });
+        window.open(getWhatsAppLink(body), '_blank', 'noopener,noreferrer');
+        setSentHint('Opening WhatsApp with your enquiry…');
+      } else {
+        trackEvent('email_click', { context: 'trip_inquiry' });
+        window.location.href = getEmailLink(form.subject, body);
+        setSentHint('Opening your email app with the enquiry…');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -228,16 +267,18 @@ const TripInquiryForm: React.FC<TripInquiryFormProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <button
             type="button"
-            onClick={sendWhatsApp}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 text-sm font-semibold transition-colors"
+            disabled={submitting}
+            onClick={() => void submitVia('whatsapp')}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-4 py-3 text-sm font-semibold transition-colors"
           >
             <MessageCircle className="h-4 w-4" />
             WhatsApp Enquiry
           </button>
           <button
             type="button"
-            onClick={sendEmail}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-4 py-3 text-sm font-semibold transition-colors"
+            disabled={submitting}
+            onClick={() => void submitVia('email')}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white px-4 py-3 text-sm font-semibold transition-colors"
           >
             <Mail className="h-4 w-4" />
             Email Enquiry

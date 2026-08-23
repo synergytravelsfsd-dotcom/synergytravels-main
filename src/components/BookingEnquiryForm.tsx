@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle2, Mail, MessageCircle, Send } from 'lucide-react';
 import { BRAND_NAME, CONTACT, getEmailLink, getWhatsAppLink } from '../constants/contact';
 import { trackEvent, type AnalyticsEvent } from '../lib/analytics';
+import { submitLead } from '../lib/leadsApi';
 import type { TripType } from '../travel/types';
 
 export type EnquiryService =
@@ -11,6 +12,8 @@ export type EnquiryService =
   | 'visa'
   | 'insurance'
   | 'cars'
+  | 'transfers'
+  | 'packages'
   | 'general';
 
 export type FlightEnquiryInitialValues = {
@@ -169,18 +172,58 @@ const BookingEnquiryForm: React.FC<BookingEnquiryFormProps> = ({
     }
   };
 
-  const submitVia = (channel: 'whatsapp' | 'email') => {
+  const submitVia = async (channel: 'whatsapp' | 'email') => {
     if (!validate()) return;
-    persistLeadLocally();
-    trackEvent(analyticsEvent, { service, channel });
     const body = buildBody();
     const subject = `${service} enquiry — ${form.fullName} — ${BRAND_NAME}`;
+
+    const apiResult = await submitLead({
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      service,
+      channel,
+      source: 'booking_enquiry_form',
+      origin: form.origin,
+      destination: form.destination,
+      departDate: form.departDate,
+      returnDate: form.returnDate,
+      adults: form.adults,
+      children: form.children,
+      infants: form.infants,
+      cabin: form.cabin,
+      tripType: form.tripType,
+      multiCitySummary: form.multiCitySummary,
+      message: body,
+      page: typeof window !== 'undefined' ? window.location.hash || '/' : '/',
+    });
+
+    if (!apiResult.ok && !apiResult.offline) {
+      persistLeadLocally();
+    }
+
+    trackEvent(analyticsEvent, {
+      service,
+      channel,
+      lead_id: apiResult.lead?.id,
+      lead_offline: Boolean(apiResult.offline),
+    });
+    trackEvent('lead_submitted', {
+      service,
+      channel,
+      lead_id: apiResult.lead?.id,
+    });
+
+    const withRef = apiResult.lead?.id
+      ? `${body}\n\nReference: ${apiResult.lead.id}`
+      : body;
+
     if (channel === 'whatsapp') {
       trackEvent('whatsapp_click', { context: service });
-      window.open(getWhatsAppLink(body), '_blank', 'noopener,noreferrer');
+      window.open(getWhatsAppLink(withRef), '_blank', 'noopener,noreferrer');
     } else {
       trackEvent('email_click', { context: service });
-      window.location.href = getEmailLink(subject, body);
+      window.location.href = getEmailLink(subject, withRef);
     }
     setSubmitted(true);
   };

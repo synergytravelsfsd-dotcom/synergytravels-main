@@ -17,6 +17,9 @@ import HotelsEnquiryPage from './components/HotelsEnquiryPage';
 import InsurancePage from './components/InsurancePage';
 import ContactPage from './components/ContactPage';
 import LegalPage from './components/LegalPage';
+import LeadsAdmin from './components/admin/LeadsAdmin';
+import QuotePublic from './components/QuotePublic';
+import WhatsAppFab from './components/WhatsAppFab';
 import CompareResults from './components/metasearch/CompareResults';
 import VerticalHubPage from './components/metasearch/VerticalHubPage';
 import NotFoundPage from './components/NotFoundPage';
@@ -94,6 +97,14 @@ function App() {
         return;
       }
 
+      if (resolved === 'quote') {
+        setSelectedTripId(tripId || selectedTripId);
+        setCurrentPage('quote');
+        syncHash('quote', tripId || selectedTripId);
+        scrollTop();
+        return;
+      }
+
       if (
         resolved !== 'checkout' &&
         resolved !== 'compare' &&
@@ -122,8 +133,18 @@ function App() {
         setCurrentPage('trip-detail');
         return;
       }
+      if (parsed.page === 'quote' && parsed.tripId) {
+        setSelectedTripId(parsed.tripId);
+        setCurrentPage('quote');
+        return;
+      }
       setCurrentPage(parsed.page);
-      if (parsed.page !== 'trip-detail' && parsed.page !== 'checkout' && parsed.page !== 'compare') {
+      if (
+        parsed.page !== 'trip-detail' &&
+        parsed.page !== 'quote' &&
+        parsed.page !== 'checkout' &&
+        parsed.page !== 'compare'
+      ) {
         setReturnPage(parsed.page === 'not-found' ? 'home' : parsed.page);
       }
     };
@@ -199,6 +220,10 @@ function App() {
         return <VerticalHubPage pageId={currentPage} />;
       case 'contact':
         return <ContactPage />;
+      case 'admin':
+        return <LeadsAdmin />;
+      case 'quote':
+        return selectedTripId ? <QuotePublic token={selectedTripId} /> : <NotFoundPage />;
       case 'privacy-policy':
       case 'terms-and-conditions':
       case 'cookie-policy':
@@ -269,6 +294,7 @@ function App() {
 
             <Footer onLogoClick={handleLogoClick} />
             <CartDrawer />
+            {currentPage !== 'admin' && currentPage !== 'quote' && <WhatsAppFab />}
           </div>
         </CartProvider>
       </CurrencyProvider>

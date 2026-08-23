@@ -4,9 +4,13 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import Stripe from 'stripe';
+import leadsRoutes from './leadsRoutes.mjs';
+import salesRoutes from './salesRoutes.mjs';
+import { hasDatabase, ensureSchema } from './db.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, '../.env.local') });
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
@@ -23,8 +27,28 @@ const paypalEnv = (process.env.PAYPAL_ENV || 'sandbox').toLowerCase();
 const paypalBase =
   paypalEnv === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
-app.use(cors({ origin: true }));
+const allowedOrigins = (process.env.CORS_ORIGINS || CLIENT_URL)
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return cb(null, true);
+      // Dev convenience
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return cb(null, true);
+      // Vercel preview / production deployments
+      if (/\.vercel\.app$/i.test(origin)) return cb(null, true);
+      return cb(null, false);
+    },
+  })
+);
 app.use(express.json({ limit: '1mb' }));
+
+app.use('/api/v1', leadsRoutes);
+app.use('/api/v1', salesRoutes);
 
 function toMinorUnits(amount) {
   return Math.max(50, Math.round(Number(amount) * 100));
@@ -254,15 +278,71 @@ app.post('/api/payments/bank/intent', (req, res) => {
   });
 });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, stripe: Boolean(stripe), paypal: Boolean(paypalClientId && paypalSecret) });
+app.post('/api/payments/quote/bank-intent', async (req, res) => {
+  try {
+    const { getQuoteByToken, updateQuote } = await import('./quotesStore.mjs');
+    const token = String(req.body?.token || '');
+    const quote = await getQuoteByToken(token);
+    if (!quote) return res.status(404).json({ error: 'Quote not found' });
+    if (!['ACCEPTED', 'PAYMENT_PENDING', 'VIEWED', 'SENT'].includes(quote.status)) {
+      return res.status(400).json({ error: 'Quote is not payable in its current status' });
+    }
+    const reference =
+      quote.paymentReference ||
+      `${process.env.PAYMENT_REFERENCE_PREFIX || 'STT'}-${quote.id.replace('QT-', '')}`;
+    const amount = Number(req.body?.full ? quote.sellTotal : quote.depositAmount || quote.sellTotal);
+    await updateQuote(quote.id, {
+      status: 'PAYMENT_PENDING',
+      paymentReference: reference,
+    });
+    res.json({
+      reference,
+      method: 'bank',
+      amount: amount.toFixed(2),
+      currency: (quote.currency || CURRENCY).toUpperCase(),
+      quoteId: quote.id,
+      instructions:
+        'Transfer the exact amount and use the payment reference in the transfer note. Then send proof via WhatsApp or Email so we can confirm your booking.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Unable to create quote payment intent' });
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Payments API listening on http://127.0.0.1:${PORT}`);
-  console.log(
-    `Stripe: ${stripe ? 'configured' : 'missing'} | PayPal: ${
-      paypalClientId && paypalSecret ? 'configured' : 'missing'
-    }`
-  );
+app.get('/api/health', async (_req, res) => {
+  let dbOk = false;
+  if (hasDatabase()) {
+    try {
+      dbOk = Boolean(await ensureSchema());
+    } catch {
+      dbOk = false;
+    }
+  }
+  res.json({
+    ok: true,
+    stripe: Boolean(stripe),
+    paypal: Boolean(paypalClientId && paypalSecret),
+    leads: true,
+    sales: true,
+    crmConfigured: Boolean(process.env.CRM_ADMIN_TOKEN),
+    database: hasDatabase() ? (dbOk ? 'postgres' : 'error') : 'file',
+    runtime: process.env.VERCEL ? 'vercel' : 'node',
+  });
 });
+
+export default app;
+
+const isDirectRun =
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Synergy API listening on http://127.0.0.1:${PORT}`);
+    console.log(
+      `Stripe: ${stripe ? 'configured' : 'missing'} | PayPal: ${
+        paypalClientId && paypalSecret ? 'configured' : 'missing'
+      } | CRM: ${process.env.CRM_ADMIN_TOKEN ? 'token set' : 'token missing'}`
+    );
+  });
+}

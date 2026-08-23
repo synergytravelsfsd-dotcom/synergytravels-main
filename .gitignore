@@ -27,3 +27,8 @@ hostnext-deploy.zip
 *.sln
 *.sw?
 .env
+.env.local
+server/data/
+.vercel
+!.env.example
+.env*

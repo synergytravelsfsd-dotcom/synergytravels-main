@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.synergytravelsandtour.com/sitemap.xml
+Sitemap: https://synergytravelsandtour.com/sitemap.xml

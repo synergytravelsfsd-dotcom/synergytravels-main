@@ -18,6 +18,8 @@ export const APP_PAGES = [
   'cars',
   'cruises',
   'contact',
+  'admin',
+  'quote',
   'privacy-policy',
   'terms-and-conditions',
   'cookie-policy',
@@ -91,6 +93,9 @@ export function resolveNavigateTarget(raw: string): AppPage {
     'umrah-packages': 'umrah',
     contact: 'contact',
     about: 'contact',
+    admin: 'admin',
+    crm: 'admin',
+    quote: 'quote',
     compare: 'compare',
     metasearch: 'compare',
     privacy: 'privacy-policy',
@@ -106,6 +111,7 @@ export function resolveNavigateTarget(raw: string): AppPage {
 export function buildPageHash(page: AppPage, tripId?: string | null): string {
   if (page === 'home') return '#/';
   if (page === 'trip-detail' && tripId) return `#/trip-detail/${encodeURIComponent(tripId)}`;
+  if (page === 'quote' && tripId) return `#/quote/${encodeURIComponent(tripId)}`;
   return `#/${page}`;
 }
 
@@ -114,7 +120,7 @@ export function parsePageHash(hash: string): { page: AppPage; tripId?: string } 
   if (!raw) return { page: 'home' };
   const [segment, ...rest] = raw.split('/');
   const page = resolveNavigateTarget(segment || 'home');
-  if (page === 'trip-detail' && rest[0]) {
+  if ((page === 'trip-detail' || page === 'quote') && rest[0]) {
     return { page, tripId: decodeURIComponent(rest[0]) };
   }
   return { page };

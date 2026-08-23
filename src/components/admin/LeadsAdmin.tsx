@@ -1,0 +1,541 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { RefreshCw, Search } from 'lucide-react';
+import {
+  createQuote,
+  fetchAdminLeads,
+  fetchCustomers,
+  fetchFollowUps,
+  fetchLeadStats,
+  fetchQuotes,
+  fetchSalesStats,
+  patchAdminLead,
+  patchQuote,
+  quotePublicUrl,
+} from '../../lib/leadsApi';
+import { getWhatsAppLink } from '../../constants/contact';
+
+type Lead = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  service: string;
+  status: string;
+  leadScore: number;
+  leadBand: string;
+  channel?: string;
+  createdAt: string;
+  notes?: string;
+  assignedAgent?: string | null;
+  payload?: Record<string, string>;
+};
+
+type Quote = {
+  id: string;
+  leadId?: string | null;
+  publicToken: string;
+  status: string;
+  currency: string;
+  sellTotal: number;
+  costTotal: number;
+  profit: number;
+  depositAmount: number;
+  title: string;
+  assignedAgent?: string | null;
+  followUpAt?: string | null;
+  followUpNote?: string;
+  createdAt: string;
+};
+
+type Tab = 'leads' | 'quotes' | 'followups' | 'customers';
+
+const TOKEN_KEY = 'synergy_crm_token_v1';
+
+const LeadsAdmin: React.FC = () => {
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '');
+  const [tokenInput, setTokenInput] = useState(token);
+  const [tab, setTab] = useState<Tab>('leads');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [customers, setCustomers] = useState<Record<string, unknown>[]>([]);
+  const [followUps, setFollowUps] = useState<Quote[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
+  const [quoteStatuses, setQuoteStatuses] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [q, setQ] = useState('');
+  const [stats, setStats] = useState<Record<string, unknown> | null>(null);
+  const [sales, setSales] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [quoteForm, setQuoteForm] = useState({
+    leadId: '',
+    title: '',
+    summary: '',
+    sellTotal: '',
+    costTotal: '',
+    assignedAgent: '',
+  });
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setError('');
+    try {
+      const [list, st, qt, ss, fu, cu] = await Promise.all([
+        fetchAdminLeads(token, { status: statusFilter || undefined, q: q || undefined }),
+        fetchLeadStats(token),
+        fetchQuotes(token, { q: q || undefined }),
+        fetchSalesStats(token),
+        fetchFollowUps(token),
+        fetchCustomers(token, q || undefined),
+      ]);
+      setLeads((list.leads || []) as Lead[]);
+      setStatuses(list.statuses || []);
+      setQuotes((qt.quotes || []) as Quote[]);
+      setQuoteStatuses(qt.statuses || []);
+      setStats(st);
+      setSales(ss);
+      setFollowUps((fu.followUps || []) as Quote[]);
+      setCustomers(cu.customers || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load CRM');
+      setLeads([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, statusFilter, q]);
+
+  useEffect(() => {
+    if (token) load();
+  }, [token, load]);
+
+  const saveToken = () => {
+    localStorage.setItem(TOKEN_KEY, tokenInput.trim());
+    setToken(tokenInput.trim());
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      await patchAdminLead(token, id, { status });
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Update failed');
+    }
+  };
+
+  const assignAgent = async (id: string, assignedAgent: string) => {
+    try {
+      await patchAdminLead(token, id, { assignedAgent });
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Assign failed');
+    }
+  };
+
+  const onCreateQuote = async () => {
+    if (!quoteForm.leadId || !quoteForm.sellTotal) {
+      alert('Lead ID and sell total are required');
+      return;
+    }
+    try {
+      const data = await createQuote(token, {
+        leadId: quoteForm.leadId,
+        title: quoteForm.title || 'Travel quotation',
+        summary: quoteForm.summary,
+        sellTotal: Number(quoteForm.sellTotal),
+        costTotal: Number(quoteForm.costTotal || 0),
+        assignedAgent: quoteForm.assignedAgent || undefined,
+        lineItems: [
+          {
+            label: quoteForm.title || 'Package / itinerary',
+            quantity: 1,
+            unitSell: Number(quoteForm.sellTotal),
+            unitCost: Number(quoteForm.costTotal || 0),
+          },
+        ],
+      });
+      const sent = await patchQuote(token, data.quote.id, { status: 'SENT' });
+      const url = quotePublicUrl(sent.quote.publicToken || data.quote.publicToken);
+      await load();
+      setTab('quotes');
+      alert(`Quote created and marked SENT.\nShare link:\n${url}`);
+      setQuoteForm({ leadId: '', title: '', summary: '', sellTotal: '', costTotal: '', assignedAgent: '' });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Quote create failed');
+    }
+  };
+
+  const money = (n: number, currency = 'GBP') =>
+    new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(Number(n) || 0);
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-slate-50 pb-16">
+        <div className="max-w-md mx-auto px-4 pt-10">
+          <h1 className="text-2xl font-bold text-slate-900">Synergy Sales CRM</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Enter the CRM admin token (`CRM_ADMIN_TOKEN`). Staff only.
+          </p>
+          <input
+            type="password"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            className="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+            placeholder="CRM admin token"
+          />
+          <button
+            type="button"
+            onClick={saveToken}
+            className="mt-3 w-full rounded-xl bg-orange-600 text-white py-3 font-semibold"
+          >
+            Unlock CRM
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <div className="bg-slate-950 text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Sales CRM</h1>
+            <p className="text-slate-300 text-sm mt-1">
+              Phase 2 — leads → quotes → follow-ups → payment
+              {sales?.storage ? ` · storage: ${String(sales.storage)}` : ''}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={load}
+              className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(TOKEN_KEY);
+                setToken('');
+              }}
+              className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold"
+            >
+              Lock
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Stat label="Leads" value={String(stats?.total ?? 0)} />
+          <Stat label="Hot" value={String(stats?.hot ?? 0)} accent="text-orange-600" />
+          <Stat label="Open quotes" value={String(sales?.quotesOpen ?? 0)} />
+          <Stat label="Pipeline" value={money(Number(sales?.pipelineSell || 0))} />
+          <Stat label="Profit (paid)" value={money(Number(sales?.realizedProfit || 0))} accent="text-emerald-600" />
+          <Stat label="Follow-ups due" value={String(sales?.followUpsDue ?? 0)} accent="text-rose-600" />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['leads', 'Leads'],
+              ['quotes', 'Quotes'],
+              ['followups', 'Follow-ups'],
+              ['customers', 'Customers'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                tab === id ? 'bg-orange-600 text-white' : 'bg-white border border-slate-200 text-slate-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <label className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && load()}
+              placeholder="Search"
+              className="w-full rounded-xl border border-slate-200 pl-9 pr-3 py-2.5 bg-white"
+            />
+          </label>
+          {tab === 'leads' && (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 px-3 py-2.5 bg-white"
+            >
+              <option value="">All statuses</option>
+              {statuses.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
+          <button type="button" onClick={load} className="rounded-xl bg-orange-600 text-white px-5 py-2.5 font-semibold">
+            Filter
+          </button>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</div>
+        )}
+
+        {tab === 'leads' && (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+              <h2 className="font-bold text-slate-900">Create quote from lead</h2>
+              <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <input
+                  placeholder="Lead ID (e.g. ST-…)"
+                  value={quoteForm.leadId}
+                  onChange={(e) => setQuoteForm((p) => ({ ...p, leadId: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5"
+                />
+                <input
+                  placeholder="Title"
+                  value={quoteForm.title}
+                  onChange={(e) => setQuoteForm((p) => ({ ...p, title: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5"
+                />
+                <input
+                  placeholder="Agent name"
+                  value={quoteForm.assignedAgent}
+                  onChange={(e) => setQuoteForm((p) => ({ ...p, assignedAgent: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5"
+                />
+                <input
+                  placeholder="Sell total"
+                  type="number"
+                  value={quoteForm.sellTotal}
+                  onChange={(e) => setQuoteForm((p) => ({ ...p, sellTotal: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5"
+                />
+                <input
+                  placeholder="Cost total (internal)"
+                  type="number"
+                  value={quoteForm.costTotal}
+                  onChange={(e) => setQuoteForm((p) => ({ ...p, costTotal: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5"
+                />
+                <button
+                  type="button"
+                  onClick={() => void onCreateQuote()}
+                  className="rounded-xl bg-slate-900 text-white px-4 py-2.5 font-semibold"
+                >
+                  Create &amp; send quote
+                </button>
+              </div>
+              <textarea
+                placeholder="Summary / inclusions for customer"
+                value={quoteForm.summary}
+                onChange={(e) => setQuoteForm((p) => ({ ...p, summary: e.target.value }))}
+                className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 min-h-[80px]"
+              />
+            </div>
+
+            {leads.map((lead) => (
+              <article key={lead.id} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="font-mono text-xs font-semibold text-orange-600"
+                        onClick={() => setQuoteForm((p) => ({ ...p, leadId: lead.id, title: `${lead.service} for ${lead.name}` }))}
+                        title="Use for quote"
+                      >
+                        {lead.id}
+                      </button>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold">{lead.service}</span>
+                      <span className="rounded-full bg-orange-50 text-orange-800 px-2 py-0.5 text-xs font-semibold">
+                        {lead.leadBand} ({lead.leadScore})
+                      </span>
+                    </div>
+                    <h2 className="mt-1 text-lg font-bold text-slate-900">{lead.name}</h2>
+                    <p className="text-sm text-slate-600">
+                      {lead.email} · {lead.phone}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {new Date(lead.createdAt).toLocaleString()} · {lead.channel || 'website'}
+                      {lead.assignedAgent ? ` · Agent: ${lead.assignedAgent}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    <input
+                      placeholder="Assign agent"
+                      defaultValue={lead.assignedAgent || ''}
+                      onBlur={(e) => {
+                        if (e.target.value !== (lead.assignedAgent || '')) {
+                          void assignAgent(lead.id, e.target.value);
+                        }
+                      }}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                    />
+                    <select
+                      value={lead.status}
+                      onChange={(e) => updateStatus(lead.id, e.target.value)}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                    >
+                      {statuses.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <a
+                      href={getWhatsAppLink(`Hi ${lead.name}, regarding your Synergy enquiry ${lead.id}…`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white px-4 py-2 text-sm font-semibold"
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                </div>
+              </article>
+            ))}
+            {!loading && leads.length === 0 && !error && (
+              <p className="text-center text-slate-500 py-12">No leads yet.</p>
+            )}
+          </div>
+        )}
+
+        {tab === 'quotes' && (
+          <div className="space-y-3">
+            {quotes.map((quote) => (
+              <article key={quote.id} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-col lg:flex-row justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="font-mono text-xs font-semibold text-orange-600">{quote.id}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold">{quote.status}</span>
+                      {quote.leadId && <span className="text-xs text-slate-500">Lead {quote.leadId}</span>}
+                    </div>
+                    <h2 className="mt-1 font-bold text-slate-900">{quote.title}</h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Sell {money(quote.sellTotal, quote.currency)} · Cost {money(quote.costTotal, quote.currency)} ·{' '}
+                      <span className="font-semibold text-emerald-700">Profit {money(quote.profit, quote.currency)}</span>
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {quote.assignedAgent ? `Agent ${quote.assignedAgent} · ` : ''}
+                      {new Date(quote.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={quote.status}
+                      onChange={(e) => void patchQuote(token, quote.id, { status: e.target.value }).then(load)}
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                    >
+                      {quoteStatuses.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = quotePublicUrl(quote.publicToken);
+                        void navigator.clipboard?.writeText(url);
+                        alert(`Customer link copied:\n${url}`);
+                      }}
+                      className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold"
+                    >
+                      Copy customer link
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+            {!loading && quotes.length === 0 && <p className="text-center text-slate-500 py-12">No quotes yet.</p>}
+          </div>
+        )}
+
+        {tab === 'followups' && (
+          <div className="space-y-3">
+            {followUps.map((q) => (
+              <article
+                key={q.id}
+                className={`rounded-2xl border p-4 sm:p-5 ${
+                  (q as Quote & { overdue?: boolean }).overdue
+                    ? 'border-rose-200 bg-rose-50'
+                    : 'border-slate-200 bg-white'
+                }`}
+              >
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <div className="font-mono text-xs text-orange-600">{q.id}</div>
+                    <h2 className="font-bold">{q.title}</h2>
+                    <p className="text-sm text-slate-600">{q.followUpNote}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Due {q.followUpAt ? new Date(q.followUpAt).toLocaleString() : '—'} · {q.status}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void patchQuote(token, q.id, {
+                        followUpAt: new Date(Date.now() + 2 * 86400000).toISOString(),
+                        followUpNote: 'Follow-up completed / rescheduled +2 days',
+                      }).then(load)
+                    }
+                    className="rounded-xl bg-orange-600 text-white px-4 py-2 text-sm font-semibold h-fit"
+                  >
+                    Snooze +2d
+                  </button>
+                </div>
+              </article>
+            ))}
+            {!loading && followUps.length === 0 && (
+              <p className="text-center text-slate-500 py-12">No follow-ups due.</p>
+            )}
+          </div>
+        )}
+
+        {tab === 'customers' && (
+          <div className="space-y-3">
+            {customers.map((c) => (
+              <article key={String(c.id)} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="font-mono text-xs text-orange-600">{String(c.id)}</div>
+                <h2 className="font-bold text-slate-900">{String(c.name)}</h2>
+                <p className="text-sm text-slate-600">
+                  {String(c.email || '')} · {String(c.phone || '')}
+                </p>
+                {c.country ? <p className="text-xs text-slate-500 mt-1">{String(c.country)}</p> : null}
+              </article>
+            ))}
+            {!loading && customers.length === 0 && (
+              <p className="text-center text-slate-500 py-12">No customers yet.</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div className="rounded-2xl bg-white border border-slate-200 p-4">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`text-xl font-bold ${accent || ''}`}>{value}</div>
+    </div>
+  );
+}
+
+export default LeadsAdmin;
