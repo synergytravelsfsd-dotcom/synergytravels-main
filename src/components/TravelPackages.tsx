@@ -7,6 +7,7 @@ import { getTourCompareLinks } from '../constants/integrations';
 import { findTripByTitle, LEGACY_PACKAGE_ID_MAP, navigateToTrip } from '../data/trips';
 import { TRIP_IMAGES } from '../data/tripImages';
 import TripInquiryForm from './TripInquiryForm';
+import HolidayBuilder from './HolidayBuilder';
 
 function openTripDetail(pkg: { id: number; title: string }) {
   const trip =
@@ -554,6 +555,10 @@ const TravelPackages: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="mt-12 lg:mt-16 max-w-4xl mx-auto">
+          <HolidayBuilder />
         </div>
 
         {/* BrightstarGo-style enquiry form on packages page */}

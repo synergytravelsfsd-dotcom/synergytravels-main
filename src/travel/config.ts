@@ -26,7 +26,8 @@ export function getSkyscannerAffiliateId(): string {
 }
 
 export function isProviderApiConfigured(): boolean {
-  // Real inventory APIs are not connected yet. Deeplinks may still be used.
+  // Client may attempt live search when this flag is true; the server still refuses
+  // invented inventory unless an authorised adapter + credentials are present.
   return String(import.meta.env.VITE_TRAVEL_PROVIDER_LIVE || '').toLowerCase() === 'true';
 }
 
