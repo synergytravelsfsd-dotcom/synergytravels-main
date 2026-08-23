@@ -29,6 +29,19 @@ import {
   createDocument,
 } from '../../lib/portalApi';
 import { aiAssistQuote, aiFollowUps, aiInsights, aiQualifyLead, fetchAiStatus } from '../../lib/aiApi';
+import {
+  agentPortalUrl,
+  createB2bAccount,
+  createB2bCommission,
+  createB2bPortalLink,
+  createB2bStaff,
+  fetchB2bAccounts,
+  fetchB2bCommissions,
+  fetchB2bRequests,
+  fetchB2bStats,
+  patchB2bAccount,
+  patchB2bRequest,
+} from '../../lib/b2bApi';
 import { getWhatsAppLink } from '../../constants/contact';
 
 type Lead = {
@@ -64,7 +77,16 @@ type Quote = {
   createdAt: string;
 };
 
-type Tab = 'leads' | 'quotes' | 'followups' | 'customers' | 'visa' | 'payments' | 'portal' | 'ai';
+type Tab =
+  | 'leads'
+  | 'quotes'
+  | 'followups'
+  | 'customers'
+  | 'visa'
+  | 'payments'
+  | 'portal'
+  | 'ai'
+  | 'b2b';
 
 const TOKEN_KEY = 'synergy_crm_token_v1';
 
@@ -101,6 +123,34 @@ const LeadsAdmin: React.FC = () => {
   const [aiOut, setAiOut] = useState<Record<string, unknown> | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMode, setAiMode] = useState('');
+  const [b2bAccounts, setB2bAccounts] = useState<Record<string, unknown>[]>([]);
+  const [b2bRequests, setB2bRequests] = useState<Record<string, unknown>[]>([]);
+  const [b2bCommissions, setB2bCommissions] = useState<Record<string, unknown>[]>([]);
+  const [b2bStats, setB2bStats] = useState<Record<string, unknown> | null>(null);
+  const [accountStatuses, setAccountStatuses] = useState<string[]>([]);
+  const [requestStatuses, setRequestStatuses] = useState<string[]>([]);
+  const [b2bAccountForm, setB2bAccountForm] = useState({
+    companyName: '',
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
+    creditLimit: '',
+    commissionRate: '',
+    currency: 'AED',
+  });
+  const [b2bStaffForm, setB2bStaffForm] = useState({
+    accountId: '',
+    name: '',
+    email: '',
+    role: 'TRAVELLER',
+  });
+  const [b2bLinkForm, setB2bLinkForm] = useState({ accountId: '', staffId: '', daysValid: '30' });
+  const [b2bCommissionForm, setB2bCommissionForm] = useState({
+    accountId: '',
+    sellAmount: '',
+    commissionAmount: '',
+    notes: '',
+  });
   const [statuses, setStatuses] = useState<string[]>([]);
   const [quoteStatuses, setQuoteStatuses] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
@@ -123,20 +173,25 @@ const LeadsAdmin: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [list, st, qt, ss, fu, cu, vc, pay, rem, notes, p4, docs] = await Promise.all([
-        fetchAdminLeads(token, { status: statusFilter || undefined, q: q || undefined }),
-        fetchLeadStats(token),
-        fetchQuotes(token, { q: q || undefined }),
-        fetchSalesStats(token),
-        fetchFollowUps(token),
-        fetchCustomers(token, q || undefined),
-        fetchVisaCases(token, { q: q || undefined }),
-        fetchPayments(token, { q: q || undefined }),
-        fetchPassportReminders(token),
-        fetchNotifications(token),
-        fetchPhase4Stats(token),
-        fetchDocuments(token),
-      ]);
+      const [list, st, qt, ss, fu, cu, vc, pay, rem, notes, p4, docs, b2a, b2r, b2c, b2s] =
+        await Promise.all([
+          fetchAdminLeads(token, { status: statusFilter || undefined, q: q || undefined }),
+          fetchLeadStats(token),
+          fetchQuotes(token, { q: q || undefined }),
+          fetchSalesStats(token),
+          fetchFollowUps(token),
+          fetchCustomers(token, q || undefined),
+          fetchVisaCases(token, { q: q || undefined }),
+          fetchPayments(token, { q: q || undefined }),
+          fetchPassportReminders(token),
+          fetchNotifications(token),
+          fetchPhase4Stats(token),
+          fetchDocuments(token),
+          fetchB2bAccounts(token, q || undefined),
+          fetchB2bRequests(token),
+          fetchB2bCommissions(token),
+          fetchB2bStats(token),
+        ]);
       setLeads((list.leads || []) as Lead[]);
       setStatuses(list.statuses || []);
       setQuotes((qt.quotes || []) as Quote[]);
@@ -153,6 +208,12 @@ const LeadsAdmin: React.FC = () => {
       setNotifications(notes.notifications || []);
       setPhase4(p4);
       setDocuments(docs.documents || []);
+      setB2bAccounts(b2a.accounts || []);
+      setAccountStatuses(b2a.statuses || []);
+      setB2bRequests(b2r.requests || []);
+      setRequestStatuses(b2r.statuses || []);
+      setB2bCommissions(b2c.commissions || []);
+      setB2bStats(b2s);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CRM');
       setLeads([]);
@@ -285,13 +346,14 @@ const LeadsAdmin: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <Stat label="Leads" value={String(stats?.total ?? 0)} />
           <Stat label="Hot" value={String(stats?.hot ?? 0)} accent="text-orange-600" />
           <Stat label="Open quotes" value={String(sales?.quotesOpen ?? 0)} />
           <Stat label="Visa open" value={String(phase4?.visaOpen ?? 0)} />
           <Stat label="Pay pending" value={String(phase4?.paymentsPending ?? 0)} accent="text-rose-600" />
           <Stat label="Passport due" value={String(phase4?.passportRemindersDue ?? 0)} accent="text-amber-600" />
+          <Stat label="B2B accounts" value={String(b2bStats?.accountsTotal ?? 0)} />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -305,6 +367,7 @@ const LeadsAdmin: React.FC = () => {
               ['payments', 'Payments'],
               ['portal', 'Portal'],
               ['ai', 'AI'],
+              ['b2b', 'B2B'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -839,6 +902,333 @@ const LeadsAdmin: React.FC = () => {
                     <div className="text-slate-600">{String(n.body)}</div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'b2b' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950">
+              Corporate / agent accounts with credit holds on approval, staff portals, and commission
+              ledger. Share agent links once — raw tokens are shown only at creation.
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Stat label="Accounts" value={String(b2bStats?.accountsTotal ?? 0)} />
+              <Stat label="Active" value={String(b2bStats?.accountsActive ?? 0)} />
+              <Stat label="Open requests" value={String(b2bStats?.requestsOpen ?? 0)} />
+              <Stat
+                label="Credit used"
+                value={money(Number(b2bStats?.creditUsed ?? 0), 'AED')}
+                accent="text-amber-700"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <input
+                placeholder="Company name *"
+                value={b2bAccountForm.companyName}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, companyName: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Contact name"
+                value={b2bAccountForm.contactName}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, contactName: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Contact email"
+                value={b2bAccountForm.contactEmail}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, contactEmail: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Contact phone"
+                value={b2bAccountForm.contactPhone}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, contactPhone: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Credit limit"
+                value={b2bAccountForm.creditLimit}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, creditLimit: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Commission % (e.g. 8)"
+                value={b2bAccountForm.commissionRate}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, commissionRate: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Currency"
+                value={b2bAccountForm.currency}
+                onChange={(e) => setB2bAccountForm((p) => ({ ...p, currency: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-orange-600 text-white px-4 py-2.5 font-semibold"
+                onClick={() =>
+                  void createB2bAccount(token, {
+                    companyName: b2bAccountForm.companyName,
+                    contactName: b2bAccountForm.contactName,
+                    contactEmail: b2bAccountForm.contactEmail,
+                    contactPhone: b2bAccountForm.contactPhone,
+                    creditLimit: Number(b2bAccountForm.creditLimit) || 0,
+                    commissionRate: Number(b2bAccountForm.commissionRate) || 0,
+                    currency: b2bAccountForm.currency || 'AED',
+                    status: 'ACTIVE',
+                  })
+                    .then(() => {
+                      setB2bAccountForm({
+                        companyName: '',
+                        contactName: '',
+                        contactEmail: '',
+                        contactPhone: '',
+                        creditLimit: '',
+                        commissionRate: '',
+                        currency: 'AED',
+                      });
+                      return load();
+                    })
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+              >
+                Create B2B account
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <input
+                placeholder="Account ID *"
+                value={b2bStaffForm.accountId}
+                onChange={(e) => setB2bStaffForm((p) => ({ ...p, accountId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Staff name *"
+                value={b2bStaffForm.name}
+                onChange={(e) => setB2bStaffForm((p) => ({ ...p, name: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Staff email"
+                value={b2bStaffForm.email}
+                onChange={(e) => setB2bStaffForm((p) => ({ ...p, email: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-slate-900 text-white px-4 py-2.5 font-semibold"
+                onClick={() =>
+                  void createB2bStaff(token, {
+                    accountId: b2bStaffForm.accountId,
+                    name: b2bStaffForm.name,
+                    email: b2bStaffForm.email,
+                    role: b2bStaffForm.role,
+                  })
+                    .then(() => {
+                      setB2bStaffForm({ accountId: '', name: '', email: '', role: 'TRAVELLER' });
+                      return load();
+                    })
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+              >
+                Add staff
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <input
+                placeholder="Account ID *"
+                value={b2bLinkForm.accountId}
+                onChange={(e) => setB2bLinkForm((p) => ({ ...p, accountId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Staff ID (optional)"
+                value={b2bLinkForm.staffId}
+                onChange={(e) => setB2bLinkForm((p) => ({ ...p, staffId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Days valid"
+                value={b2bLinkForm.daysValid}
+                onChange={(e) => setB2bLinkForm((p) => ({ ...p, daysValid: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-indigo-700 text-white px-4 py-2.5 font-semibold"
+                onClick={() =>
+                  void createB2bPortalLink(token, {
+                    accountId: b2bLinkForm.accountId,
+                    staffId: b2bLinkForm.staffId || undefined,
+                    daysValid: Number(b2bLinkForm.daysValid) || 30,
+                  })
+                    .then((data) => {
+                      const url = agentPortalUrl(data.link.token);
+                      void navigator.clipboard?.writeText(url);
+                      alert(`Agent portal link created (copied):\n${url}\n\nSave this token now — shown once.`);
+                      return load();
+                    })
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+              >
+                Create agent portal link
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 font-bold">Accounts</div>
+              <div className="divide-y divide-slate-100">
+                {b2bAccounts.map((a) => (
+                  <div key={String(a.id)} className="px-4 py-3 flex flex-wrap gap-3 items-center justify-between text-sm">
+                    <div>
+                      <div className="font-semibold">
+                        {String(a.companyName)} · {String(a.id)}
+                      </div>
+                      <div className="text-slate-600">
+                        {String(a.status)} · credit {money(Number(a.creditUsed), String(a.currency || 'AED'))} /{' '}
+                        {money(Number(a.creditLimit), String(a.currency || 'AED'))} · commission{' '}
+                        {String(a.commissionRate)}%
+                      </div>
+                    </div>
+                    <select
+                      value={String(a.status)}
+                      className="rounded-lg border border-slate-200 px-2 py-1.5"
+                      onChange={(e) =>
+                        void patchB2bAccount(token, String(a.id), { status: e.target.value })
+                          .then(load)
+                          .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                      }
+                    >
+                      {(accountStatuses.length ? accountStatuses : ['PROSPECT', 'ACTIVE', 'SUSPENDED', 'CLOSED']).map(
+                        (s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                ))}
+                {b2bAccounts.length === 0 && (
+                  <p className="px-4 py-6 text-sm text-slate-500">No B2B accounts yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 font-bold">Travel requests</div>
+              <div className="divide-y divide-slate-100">
+                {b2bRequests.map((r) => (
+                  <div key={String(r.id)} className="px-4 py-3 flex flex-wrap gap-3 items-center justify-between text-sm">
+                    <div>
+                      <div className="font-semibold">
+                        {String(r.title || r.id)} · {String(r.accountId)}
+                      </div>
+                      <div className="text-slate-600">
+                        {String(r.origin || '—')} → {String(r.destination || '—')} · est.{' '}
+                        {money(Number(r.estimatedCost), 'AED')}
+                      </div>
+                    </div>
+                    <select
+                      value={String(r.status)}
+                      className="rounded-lg border border-slate-200 px-2 py-1.5"
+                      onChange={(e) =>
+                        void patchB2bRequest(token, String(r.id), { status: e.target.value })
+                          .then(load)
+                          .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                      }
+                    >
+                      {(requestStatuses.length
+                        ? requestStatuses
+                        : ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'APPROVED', 'REJECTED', 'BOOKING', 'COMPLETED']
+                      ).map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+                {b2bRequests.length === 0 && (
+                  <p className="px-4 py-6 text-sm text-slate-500">No travel requests.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <input
+                placeholder="Account ID *"
+                value={b2bCommissionForm.accountId}
+                onChange={(e) => setB2bCommissionForm((p) => ({ ...p, accountId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Sell amount *"
+                value={b2bCommissionForm.sellAmount}
+                onChange={(e) => setB2bCommissionForm((p) => ({ ...p, sellAmount: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Commission (blank = rate %)"
+                value={b2bCommissionForm.commissionAmount}
+                onChange={(e) => setB2bCommissionForm((p) => ({ ...p, commissionAmount: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-emerald-700 text-white px-4 py-2.5 font-semibold"
+                onClick={() =>
+                  void createB2bCommission(token, {
+                    accountId: b2bCommissionForm.accountId,
+                    sellAmount: Number(b2bCommissionForm.sellAmount),
+                    commissionAmount: b2bCommissionForm.commissionAmount
+                      ? Number(b2bCommissionForm.commissionAmount)
+                      : undefined,
+                    notes: b2bCommissionForm.notes,
+                    currency: 'AED',
+                  })
+                    .then(() => {
+                      setB2bCommissionForm({
+                        accountId: '',
+                        sellAmount: '',
+                        commissionAmount: '',
+                        notes: '',
+                      });
+                      return load();
+                    })
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+              >
+                Record commission
+              </button>
+              <input
+                placeholder="Notes"
+                value={b2bCommissionForm.notes}
+                onChange={(e) => setB2bCommissionForm((p) => ({ ...p, notes: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5 sm:col-span-2 lg:col-span-4"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h3 className="font-bold">Commissions</h3>
+              <div className="mt-3 space-y-2">
+                {b2bCommissions.slice(0, 30).map((c) => (
+                  <div key={String(c.id)} className="text-sm border-b border-slate-100 py-2 flex justify-between gap-2">
+                    <span>
+                      {String(c.accountId)} · {String(c.notes || c.id)}
+                    </span>
+                    <span className="font-semibold">
+                      {money(Number(c.commissionAmount), String(c.currency || 'AED'))}
+                    </span>
+                  </div>
+                ))}
+                {b2bCommissions.length === 0 && <p className="text-sm text-slate-500">No commissions yet.</p>}
               </div>
             </div>
           </div>

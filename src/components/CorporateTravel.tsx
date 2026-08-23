@@ -221,9 +221,12 @@ const CorporateTravel: React.FC = () => {
               <ContactChoice
                 variant="green"
                 label="Get Custom Quote"
-                subject="Corporate Travel Quote"
-                message="Hi! I need a custom quote for corporate travel services. Can you help?"
+                subject="Corporate Travel / B2B Account"
+                message="Hi! I'd like a corporate / B2B travel account with credit terms and an agent portal. Can you set us up?"
               />
+              <p className="text-orange-100 text-sm max-w-lg">
+                After onboarding, your team gets a private agent portal for travel requests, approvals, and credit.
+              </p>
               <CompareLinks
                 title="Relevant corporate travel sites"
                 links={getCorporateCompareLinks()}

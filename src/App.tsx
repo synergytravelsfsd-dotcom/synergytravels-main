@@ -22,6 +22,7 @@ import QuotePublic from './components/QuotePublic';
 import CustomerPortal from './components/CustomerPortal';
 import { DestinationsIndex, DestinationPage } from './components/DestinationsPage';
 import { DealsPage, ReferralsPage } from './components/GrowthPages';
+import AgentPortal from './components/AgentPortal';
 import WhatsAppFab from './components/WhatsAppFab';
 import CompareResults from './components/metasearch/CompareResults';
 import VerticalHubPage from './components/metasearch/VerticalHubPage';
@@ -124,6 +125,14 @@ function App() {
         return;
       }
 
+      if (resolved === 'agent') {
+        setSelectedTripId(tripId || selectedTripId);
+        setCurrentPage('agent');
+        syncHash('agent', tripId || selectedTripId);
+        scrollTop();
+        return;
+      }
+
       if (
         resolved !== 'checkout' &&
         resolved !== 'compare' &&
@@ -167,12 +176,18 @@ function App() {
         setCurrentPage('destination');
         return;
       }
+      if (parsed.page === 'agent' && parsed.tripId) {
+        setSelectedTripId(parsed.tripId);
+        setCurrentPage('agent');
+        return;
+      }
       setCurrentPage(parsed.page);
       if (
         parsed.page !== 'trip-detail' &&
         parsed.page !== 'quote' &&
         parsed.page !== 'portal' &&
         parsed.page !== 'destination' &&
+        parsed.page !== 'agent' &&
         parsed.page !== 'checkout' &&
         parsed.page !== 'compare'
       ) {
@@ -264,6 +279,8 @@ function App() {
         return <DealsPage />;
       case 'referrals':
         return <ReferralsPage />;
+      case 'agent':
+        return selectedTripId ? <AgentPortal token={selectedTripId} /> : <NotFoundPage />;
       case 'admin':
         return <LeadsAdmin />;
       case 'quote':
@@ -340,7 +357,10 @@ function App() {
 
             <Footer onLogoClick={handleLogoClick} />
             <CartDrawer />
-            {currentPage !== 'admin' && currentPage !== 'quote' && currentPage !== 'portal' && <WhatsAppFab />}
+            {currentPage !== 'admin' &&
+              currentPage !== 'quote' &&
+              currentPage !== 'portal' &&
+              currentPage !== 'agent' && <WhatsAppFab />}
           </div>
         </CartProvider>
       </CurrencyProvider>
