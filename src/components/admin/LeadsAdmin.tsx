@@ -12,6 +12,22 @@ import {
   patchQuote,
   quotePublicUrl,
 } from '../../lib/leadsApi';
+import {
+  createPortalLink,
+  createVisaCase,
+  fetchDocuments,
+  fetchNotifications,
+  fetchPassportReminders,
+  fetchPayments,
+  fetchPhase4Stats,
+  fetchVisaCases,
+  markPassportReminderSent,
+  patchCustomerPassport,
+  patchPayment,
+  patchVisaCase,
+  portalPublicUrl,
+  createDocument,
+} from '../../lib/portalApi';
 import { getWhatsAppLink } from '../../constants/contact';
 
 type Lead = {
@@ -47,7 +63,7 @@ type Quote = {
   createdAt: string;
 };
 
-type Tab = 'leads' | 'quotes' | 'followups' | 'customers';
+type Tab = 'leads' | 'quotes' | 'followups' | 'customers' | 'visa' | 'payments' | 'portal';
 
 const TOKEN_KEY = 'synergy_crm_token_v1';
 
@@ -59,6 +75,28 @@ const LeadsAdmin: React.FC = () => {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<Record<string, unknown>[]>([]);
   const [followUps, setFollowUps] = useState<Quote[]>([]);
+  const [visaCases, setVisaCases] = useState<Record<string, unknown>[]>([]);
+  const [visaStatuses, setVisaStatuses] = useState<string[]>([]);
+  const [paymentsList, setPaymentsList] = useState<Record<string, unknown>[]>([]);
+  const [paymentStatuses, setPaymentStatuses] = useState<string[]>([]);
+  const [reminders, setReminders] = useState<Record<string, unknown>[]>([]);
+  const [notifications, setNotifications] = useState<Record<string, unknown>[]>([]);
+  const [documents, setDocuments] = useState<Record<string, unknown>[]>([]);
+  const [phase4, setPhase4] = useState<Record<string, unknown> | null>(null);
+  const [visaForm, setVisaForm] = useState({
+    leadId: '',
+    customerId: '',
+    destination: '',
+    nationality: '',
+    visaType: '',
+    assignedAgent: '',
+  });
+  const [portalForm, setPortalForm] = useState({ customerId: '', daysValid: '14' });
+  const [passportForm, setPassportForm] = useState({
+    customerId: '',
+    passportExpiry: '',
+    passportCountry: '',
+  });
   const [statuses, setStatuses] = useState<string[]>([]);
   const [quoteStatuses, setQuoteStatuses] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
@@ -81,13 +119,19 @@ const LeadsAdmin: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [list, st, qt, ss, fu, cu] = await Promise.all([
+      const [list, st, qt, ss, fu, cu, vc, pay, rem, notes, p4, docs] = await Promise.all([
         fetchAdminLeads(token, { status: statusFilter || undefined, q: q || undefined }),
         fetchLeadStats(token),
         fetchQuotes(token, { q: q || undefined }),
         fetchSalesStats(token),
         fetchFollowUps(token),
         fetchCustomers(token, q || undefined),
+        fetchVisaCases(token, { q: q || undefined }),
+        fetchPayments(token, { q: q || undefined }),
+        fetchPassportReminders(token),
+        fetchNotifications(token),
+        fetchPhase4Stats(token),
+        fetchDocuments(token),
       ]);
       setLeads((list.leads || []) as Lead[]);
       setStatuses(list.statuses || []);
@@ -97,6 +141,14 @@ const LeadsAdmin: React.FC = () => {
       setSales(ss);
       setFollowUps((fu.followUps || []) as Quote[]);
       setCustomers(cu.customers || []);
+      setVisaCases(vc.cases || []);
+      setVisaStatuses(vc.statuses || []);
+      setPaymentsList(pay.payments || []);
+      setPaymentStatuses(pay.statuses || []);
+      setReminders(rem.reminders || []);
+      setNotifications(notes.notifications || []);
+      setPhase4(p4);
+      setDocuments(docs.documents || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CRM');
       setLeads([]);
@@ -202,7 +254,7 @@ const LeadsAdmin: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold">Sales CRM</h1>
             <p className="text-slate-300 text-sm mt-1">
-              Phase 2 — leads → quotes → follow-ups → payment
+              Phase 4 — leads → quotes → visa → portal → payments
               {sales?.storage ? ` · storage: ${String(sales.storage)}` : ''}
             </p>
           </div>
@@ -233,9 +285,9 @@ const LeadsAdmin: React.FC = () => {
           <Stat label="Leads" value={String(stats?.total ?? 0)} />
           <Stat label="Hot" value={String(stats?.hot ?? 0)} accent="text-orange-600" />
           <Stat label="Open quotes" value={String(sales?.quotesOpen ?? 0)} />
-          <Stat label="Pipeline" value={money(Number(sales?.pipelineSell || 0))} />
-          <Stat label="Profit (paid)" value={money(Number(sales?.realizedProfit || 0))} accent="text-emerald-600" />
-          <Stat label="Follow-ups due" value={String(sales?.followUpsDue ?? 0)} accent="text-rose-600" />
+          <Stat label="Visa open" value={String(phase4?.visaOpen ?? 0)} />
+          <Stat label="Pay pending" value={String(phase4?.paymentsPending ?? 0)} accent="text-rose-600" />
+          <Stat label="Passport due" value={String(phase4?.passportRemindersDue ?? 0)} accent="text-amber-600" />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -245,6 +297,9 @@ const LeadsAdmin: React.FC = () => {
               ['quotes', 'Quotes'],
               ['followups', 'Follow-ups'],
               ['customers', 'Customers'],
+              ['visa', 'Visa'],
+              ['payments', 'Payments'],
+              ['portal', 'Portal'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -511,17 +566,276 @@ const LeadsAdmin: React.FC = () => {
           <div className="space-y-3">
             {customers.map((c) => (
               <article key={String(c.id)} className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                <div className="font-mono text-xs text-orange-600">{String(c.id)}</div>
-                <h2 className="font-bold text-slate-900">{String(c.name)}</h2>
-                <p className="text-sm text-slate-600">
-                  {String(c.email || '')} · {String(c.phone || '')}
-                </p>
-                {c.country ? <p className="text-xs text-slate-500 mt-1">{String(c.country)}</p> : null}
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <button
+                      type="button"
+                      className="font-mono text-xs text-orange-600"
+                      onClick={() => {
+                        setPortalForm((p) => ({ ...p, customerId: String(c.id) }));
+                        setPassportForm((p) => ({ ...p, customerId: String(c.id) }));
+                        setVisaForm((p) => ({ ...p, customerId: String(c.id) }));
+                        setTab('portal');
+                      }}
+                    >
+                      {String(c.id)}
+                    </button>
+                    <h2 className="font-bold text-slate-900">{String(c.name)}</h2>
+                    <p className="text-sm text-slate-600">
+                      {String(c.email || '')} · {String(c.phone || '')}
+                    </p>
+                    {c.country ? <p className="text-xs text-slate-500 mt-1">{String(c.country)}</p> : null}
+                  </div>
+                </div>
               </article>
             ))}
             {!loading && customers.length === 0 && (
               <p className="text-center text-slate-500 py-12">No customers yet.</p>
             )}
+          </div>
+        )}
+
+        {tab === 'visa' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              Visa statuses track Synergy assistance only. Never mark immigration approval/refusal here.
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <input
+                placeholder="Customer ID"
+                value={visaForm.customerId}
+                onChange={(e) => setVisaForm((p) => ({ ...p, customerId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Lead ID (optional)"
+                value={visaForm.leadId}
+                onChange={(e) => setVisaForm((p) => ({ ...p, leadId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Destination *"
+                value={visaForm.destination}
+                onChange={(e) => setVisaForm((p) => ({ ...p, destination: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Nationality"
+                value={visaForm.nationality}
+                onChange={(e) => setVisaForm((p) => ({ ...p, nationality: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Visa type"
+                value={visaForm.visaType}
+                onChange={(e) => setVisaForm((p) => ({ ...p, visaType: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  void createVisaCase(token, visaForm)
+                    .then(load)
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+                className="rounded-xl bg-slate-900 text-white px-4 py-2.5 font-semibold"
+              >
+                Open visa case
+              </button>
+            </div>
+            {visaCases.map((c) => (
+              <article key={String(c.id)} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <div className="font-mono text-xs text-orange-600">{String(c.id)}</div>
+                    <h2 className="font-bold">
+                      {String(c.destination)} · {String(c.visaType || 'Assistance')}
+                    </h2>
+                    <p className="text-sm text-slate-600">
+                      Customer {String(c.customerId || '—')} · Lead {String(c.leadId || '—')}
+                    </p>
+                  </div>
+                  <select
+                    value={String(c.status)}
+                    onChange={(e) => void patchVisaCase(token, String(c.id), { status: e.target.value }).then(load)}
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm h-fit"
+                  >
+                    {visaStatuses.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="mt-3 text-sm font-semibold text-orange-700"
+                  onClick={() =>
+                    void createDocument(token, {
+                      customerId: c.customerId,
+                      visaCaseId: c.id,
+                      docType: 'passport_scan',
+                      fileName: 'Requested: passport bio page',
+                      status: 'REQUESTED',
+                    }).then(load)
+                  }
+                >
+                  + Request passport document
+                </button>
+              </article>
+            ))}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h3 className="font-bold">Documents</h3>
+              <div className="mt-2 space-y-2">
+                {documents.slice(0, 30).map((d) => (
+                  <div key={String(d.id)} className="text-sm flex justify-between gap-2 border-b border-slate-100 py-2">
+                    <span>
+                      {String(d.id)} · {String(d.fileName || d.docType)} · case {String(d.visaCaseId || '—')}
+                    </span>
+                    <span className="font-semibold">{String(d.status)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'payments' && (
+          <div className="space-y-3">
+            {paymentsList.map((p) => (
+              <article key={String(p.id)} className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap justify-between gap-3">
+                <div>
+                  <div className="font-mono text-xs text-orange-600">{String(p.id)}</div>
+                  <div className="font-bold">
+                    {money(Number(p.amount), String(p.currency || 'GBP'))} · {String(p.method)}
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Ref {String(p.reference || '—')} · Quote {String(p.quoteId || '—')}
+                  </p>
+                </div>
+                <select
+                  value={String(p.status)}
+                  onChange={(e) => void patchPayment(token, String(p.id), { status: e.target.value }).then(load)}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm h-fit"
+                >
+                  {paymentStatuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </article>
+            ))}
+            {!loading && paymentsList.length === 0 && (
+              <p className="text-center text-slate-500 py-12">No payments recorded yet.</p>
+            )}
+          </div>
+        )}
+
+        {tab === 'portal' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-3 gap-3">
+              <input
+                placeholder="Customer ID *"
+                value={portalForm.customerId}
+                onChange={(e) => setPortalForm((p) => ({ ...p, customerId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                placeholder="Days valid"
+                value={portalForm.daysValid}
+                onChange={(e) => setPortalForm((p) => ({ ...p, daysValid: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  void createPortalLink(token, {
+                    customerId: portalForm.customerId,
+                    daysValid: Number(portalForm.daysValid) || 14,
+                  })
+                    .then((data) => {
+                      const url = portalPublicUrl(data.link.token);
+                      void navigator.clipboard?.writeText(url);
+                      alert(`Portal link created (copied):\n${url}\n\nSave this token now — it is shown once.`);
+                      return load();
+                    })
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+                className="rounded-xl bg-orange-600 text-white px-4 py-2.5 font-semibold"
+              >
+                Create portal link
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 grid sm:grid-cols-3 gap-3">
+              <input
+                placeholder="Customer ID"
+                value={passportForm.customerId}
+                onChange={(e) => setPassportForm((p) => ({ ...p, customerId: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <input
+                type="date"
+                value={passportForm.passportExpiry}
+                onChange={(e) => setPassportForm((p) => ({ ...p, passportExpiry: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  void patchCustomerPassport(token, passportForm.customerId, {
+                    passportExpiry: passportForm.passportExpiry,
+                    passportCountry: passportForm.passportCountry,
+                  })
+                    .then(load)
+                    .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
+                }
+                className="rounded-xl bg-slate-900 text-white px-4 py-2.5 font-semibold"
+              >
+                Save passport expiry
+              </button>
+              <input
+                placeholder="Passport country"
+                value={passportForm.passportCountry}
+                onChange={(e) => setPassportForm((p) => ({ ...p, passportCountry: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5 sm:col-span-3"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h3 className="font-bold">Passport reminders (≤180 days)</h3>
+              <div className="mt-3 space-y-2">
+                {reminders.map((r) => (
+                  <div key={String(r.id)} className="flex flex-wrap justify-between gap-2 text-sm border-b border-slate-100 py-2">
+                    <span>
+                      {String(r.name)} · expires {String(r.passportExpiry)}
+                      {r.overdue ? ' · OVERDUE' : ''}
+                    </span>
+                    <button
+                      type="button"
+                      className="font-semibold text-orange-700"
+                      onClick={() => void markPassportReminderSent(token, String(r.id)).then(load)}
+                    >
+                      Mark reminder sent
+                    </button>
+                  </div>
+                ))}
+                {reminders.length === 0 && <p className="text-sm text-slate-500">No reminders due.</p>}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h3 className="font-bold">Notification log</h3>
+              <div className="mt-3 space-y-2">
+                {notifications.slice(0, 20).map((n) => (
+                  <div key={String(n.id)} className="text-sm border-b border-slate-100 py-2">
+                    <div className="font-semibold">{String(n.title)}</div>
+                    <div className="text-slate-600">{String(n.body)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

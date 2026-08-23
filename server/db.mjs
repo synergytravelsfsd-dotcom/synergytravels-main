@@ -100,6 +100,100 @@ export async function ensureSchema() {
     await db`CREATE INDEX IF NOT EXISTS quotes_status_idx ON quotes (status)`;
     await db`CREATE INDEX IF NOT EXISTS quotes_lead_idx ON quotes (lead_id)`;
     await db`CREATE INDEX IF NOT EXISTS quotes_follow_up_idx ON quotes (follow_up_at)`;
+
+    // Phase 4 — customer portal / visa / payments / notifications
+    await db`ALTER TABLE customers ADD COLUMN IF NOT EXISTS passport_expiry DATE`;
+    await db`ALTER TABLE customers ADD COLUMN IF NOT EXISTS passport_country TEXT DEFAULT ''`;
+    await db`ALTER TABLE customers ADD COLUMN IF NOT EXISTS passport_reminder_sent_at TIMESTAMPTZ`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS visa_cases (
+        id TEXT PRIMARY KEY,
+        lead_id TEXT,
+        customer_id TEXT REFERENCES customers(id),
+        destination TEXT DEFAULT '',
+        nationality TEXT DEFAULT '',
+        visa_type TEXT DEFAULT '',
+        status TEXT DEFAULT 'INTAKE',
+        assigned_agent TEXT,
+        notes TEXT DEFAULT '',
+        checklist JSONB DEFAULT '[]'::jsonb,
+        portal_visible BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS visa_cases_status_idx ON visa_cases (status)`;
+    await db`CREATE INDEX IF NOT EXISTS visa_cases_customer_idx ON visa_cases (customer_id)`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS documents (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT REFERENCES customers(id),
+        visa_case_id TEXT,
+        doc_type TEXT DEFAULT 'other',
+        file_name TEXT DEFAULT '',
+        mime_type TEXT DEFAULT '',
+        size_bytes INT DEFAULT 0,
+        status TEXT DEFAULT 'REQUESTED',
+        notes TEXT DEFAULT '',
+        storage TEXT DEFAULT 'metadata',
+        content_base64 TEXT,
+        uploaded_by TEXT DEFAULT 'staff',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS documents_case_idx ON documents (visa_case_id)`;
+    await db`CREATE INDEX IF NOT EXISTS documents_customer_idx ON documents (customer_id)`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS portal_tokens (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT REFERENCES customers(id),
+        token_hash TEXT UNIQUE NOT NULL,
+        label TEXT DEFAULT '',
+        expires_at TIMESTAMPTZ NOT NULL,
+        revoked_at TIMESTAMPTZ,
+        last_used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS portal_tokens_customer_idx ON portal_tokens (customer_id)`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS payments (
+        id TEXT PRIMARY KEY,
+        quote_id TEXT,
+        customer_id TEXT,
+        lead_id TEXT,
+        method TEXT DEFAULT 'bank',
+        status TEXT DEFAULT 'PENDING',
+        amount NUMERIC(12,2) DEFAULT 0,
+        currency TEXT DEFAULT 'GBP',
+        reference TEXT DEFAULT '',
+        notes TEXT DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS payments_quote_idx ON payments (quote_id)`;
+    await db`CREATE INDEX IF NOT EXISTS payments_status_idx ON payments (status)`;
+
+    await db`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT,
+        channel TEXT DEFAULT 'log',
+        type TEXT DEFAULT 'info',
+        title TEXT DEFAULT '',
+        body TEXT DEFAULT '',
+        meta JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS notifications_customer_idx ON notifications (customer_id)`;
+
     return true;
   })();
 

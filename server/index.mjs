@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import leadsRoutes from './leadsRoutes.mjs';
 import salesRoutes from './salesRoutes.mjs';
 import travelRoutes from './travelRoutes.mjs';
+import portalRoutes from './portalRoutes.mjs';
 import { hasDatabase, ensureSchema } from './db.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -51,6 +52,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/api/v1', leadsRoutes);
 app.use('/api/v1', salesRoutes);
 app.use('/api/v1', travelRoutes);
+app.use('/api/v1', portalRoutes);
 
 function toMinorUnits(amount) {
   return Math.max(50, Math.round(Number(amount) * 100));
@@ -297,6 +299,22 @@ app.post('/api/payments/quote/bank-intent', async (req, res) => {
       status: 'PAYMENT_PENDING',
       paymentReference: reference,
     });
+    try {
+      const { recordPayment } = await import('./phase4Store.mjs');
+      await recordPayment({
+        quoteId: quote.id,
+        customerId: quote.customerId,
+        leadId: quote.leadId,
+        method: 'bank',
+        status: 'AWAITING_PROOF',
+        amount,
+        currency: quote.currency || CURRENCY,
+        reference,
+        notes: 'Created from public quote bank payment intent',
+      });
+    } catch (payErr) {
+      console.error('payment ledger write failed', payErr);
+    }
     res.json({
       reference,
       method: 'bank',
@@ -327,6 +345,7 @@ app.get('/api/health', async (_req, res) => {
     leads: true,
     sales: true,
     travel: true,
+    portal: true,
     crmConfigured: Boolean(process.env.CRM_ADMIN_TOKEN),
     database: hasDatabase() ? (dbOk ? 'postgres' : 'error') : 'file',
     runtime: process.env.VERCEL ? 'vercel' : 'node',

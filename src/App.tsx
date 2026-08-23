@@ -19,6 +19,7 @@ import ContactPage from './components/ContactPage';
 import LegalPage from './components/LegalPage';
 import LeadsAdmin from './components/admin/LeadsAdmin';
 import QuotePublic from './components/QuotePublic';
+import CustomerPortal from './components/CustomerPortal';
 import WhatsAppFab from './components/WhatsAppFab';
 import CompareResults from './components/metasearch/CompareResults';
 import VerticalHubPage from './components/metasearch/VerticalHubPage';
@@ -105,6 +106,14 @@ function App() {
         return;
       }
 
+      if (resolved === 'portal') {
+        setSelectedTripId(tripId || selectedTripId);
+        setCurrentPage('portal');
+        syncHash('portal', tripId || selectedTripId);
+        scrollTop();
+        return;
+      }
+
       if (
         resolved !== 'checkout' &&
         resolved !== 'compare' &&
@@ -138,10 +147,16 @@ function App() {
         setCurrentPage('quote');
         return;
       }
+      if (parsed.page === 'portal' && parsed.tripId) {
+        setSelectedTripId(parsed.tripId);
+        setCurrentPage('portal');
+        return;
+      }
       setCurrentPage(parsed.page);
       if (
         parsed.page !== 'trip-detail' &&
         parsed.page !== 'quote' &&
+        parsed.page !== 'portal' &&
         parsed.page !== 'checkout' &&
         parsed.page !== 'compare'
       ) {
@@ -224,6 +239,8 @@ function App() {
         return <LeadsAdmin />;
       case 'quote':
         return selectedTripId ? <QuotePublic token={selectedTripId} /> : <NotFoundPage />;
+      case 'portal':
+        return selectedTripId ? <CustomerPortal token={selectedTripId} /> : <NotFoundPage />;
       case 'privacy-policy':
       case 'terms-and-conditions':
       case 'cookie-policy':
@@ -294,7 +311,7 @@ function App() {
 
             <Footer onLogoClick={handleLogoClick} />
             <CartDrawer />
-            {currentPage !== 'admin' && currentPage !== 'quote' && <WhatsAppFab />}
+            {currentPage !== 'admin' && currentPage !== 'quote' && currentPage !== 'portal' && <WhatsAppFab />}
           </div>
         </CartProvider>
       </CurrencyProvider>
