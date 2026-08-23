@@ -441,6 +441,7 @@ export async function resolveAgentPortal(rawToken) {
     throw err;
   }
   const accountId = row.account_id || row.accountId;
+  const staffId = row.staff_id || row.staffId || null;
   const now = new Date().toISOString();
   if (hasDatabase()) {
     const db = getSql();
@@ -454,11 +455,12 @@ export async function resolveAgentPortal(rawToken) {
     throw err;
   }
   const staff = await listStaff(accountId);
+  const linkedStaff = staffId ? staff.filter((s) => s.id === staffId) : staff;
   const requests = await listRequests({ accountId, limit: 100 });
   const commissions = await listCommissions({ accountId, limit: 100 });
   return {
     account,
-    staff,
+    staff: linkedStaff.length ? linkedStaff : staff,
     requests,
     commissions,
     disclaimer:
@@ -480,11 +482,12 @@ export async function createTravelRequest(body = {}) {
     departDate: sanitize(body.departDate, 40),
     returnDate: sanitize(body.returnDate, 40),
     budget: money(body.budget),
-    currency: sanitize(body.currency || 'GBP', 8).toUpperCase(),
+    currency: sanitize(body.currency || 'AED', 8).toUpperCase(),
     status: 'SUBMITTED',
     managerNote: '',
     synergyNote: '',
-    estimatedCost: 0,
+    // Seed estimated cost from budget so credit checks have a default until Synergy revises
+    estimatedCost: money(body.estimatedCost != null ? body.estimatedCost : body.budget),
     createdAt: now,
     updatedAt: now,
   };
@@ -549,21 +552,26 @@ export async function updateTravelRequest(id, patch) {
     updatedAt: new Date().toISOString(),
   };
 
-  // Credit hold when approved with estimated cost
-  if (patch.status === 'APPROVED' && next.estimatedCost > 0) {
-    const accounts = await listAccounts({ limit: 500 });
-    const account = accounts.find((a) => a.id === next.accountId);
-    if (account) {
-      const available = account.creditLimit - account.creditUsed;
-      if (next.estimatedCost > available && account.creditLimit > 0) {
-        const err = new Error(
-          `Insufficient credit. Available ${account.currency} ${money(available)}, need ${next.estimatedCost}`
-        );
-        err.status = 400;
-        throw err;
-      }
-      if (account.creditLimit > 0) {
-        await updateAccount(account.id, { creditUsed: money(account.creditUsed + next.estimatedCost) });
+  // Credit hold when approved — fall back to budget if estimated cost was never set
+  if (patch.status === 'APPROVED') {
+    if (!(next.estimatedCost > 0) && next.budget > 0) {
+      next.estimatedCost = next.budget;
+    }
+    if (next.estimatedCost > 0) {
+      const accounts = await listAccounts({ limit: 500 });
+      const account = accounts.find((a) => a.id === next.accountId);
+      if (account) {
+        const available = account.creditLimit - account.creditUsed;
+        if (next.estimatedCost > available && account.creditLimit > 0) {
+          const err = new Error(
+            `Insufficient credit. Available ${account.currency} ${money(available)}, need ${next.estimatedCost}`
+          );
+          err.status = 400;
+          throw err;
+        }
+        if (account.creditLimit > 0) {
+          await updateAccount(account.id, { creditUsed: money(account.creditUsed + next.estimatedCost) });
+        }
       }
     }
   }

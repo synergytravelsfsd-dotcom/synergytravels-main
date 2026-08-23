@@ -142,7 +142,7 @@ const LeadsAdmin: React.FC = () => {
     accountId: '',
     name: '',
     email: '',
-    role: 'TRAVELLER',
+    role: 'BOOKER',
   });
   const [b2bLinkForm, setB2bLinkForm] = useState({ accountId: '', staffId: '', daysValid: '30' });
   const [b2bCommissionForm, setB2bCommissionForm] = useState({
@@ -173,25 +173,20 @@ const LeadsAdmin: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [list, st, qt, ss, fu, cu, vc, pay, rem, notes, p4, docs, b2a, b2r, b2c, b2s] =
-        await Promise.all([
-          fetchAdminLeads(token, { status: statusFilter || undefined, q: q || undefined }),
-          fetchLeadStats(token),
-          fetchQuotes(token, { q: q || undefined }),
-          fetchSalesStats(token),
-          fetchFollowUps(token),
-          fetchCustomers(token, q || undefined),
-          fetchVisaCases(token, { q: q || undefined }),
-          fetchPayments(token, { q: q || undefined }),
-          fetchPassportReminders(token),
-          fetchNotifications(token),
-          fetchPhase4Stats(token),
-          fetchDocuments(token),
-          fetchB2bAccounts(token, q || undefined),
-          fetchB2bRequests(token),
-          fetchB2bCommissions(token),
-          fetchB2bStats(token),
-        ]);
+      const [list, st, qt, ss, fu, cu, vc, pay, rem, notes, p4, docs] = await Promise.all([
+        fetchAdminLeads(token, { status: statusFilter || undefined, q: q || undefined }),
+        fetchLeadStats(token),
+        fetchQuotes(token, { q: q || undefined }),
+        fetchSalesStats(token),
+        fetchFollowUps(token),
+        fetchCustomers(token, q || undefined),
+        fetchVisaCases(token, { q: q || undefined }),
+        fetchPayments(token, { q: q || undefined }),
+        fetchPassportReminders(token),
+        fetchNotifications(token),
+        fetchPhase4Stats(token),
+        fetchDocuments(token),
+      ]);
       setLeads((list.leads || []) as Lead[]);
       setStatuses(list.statuses || []);
       setQuotes((qt.quotes || []) as Quote[]);
@@ -208,12 +203,36 @@ const LeadsAdmin: React.FC = () => {
       setNotifications(notes.notifications || []);
       setPhase4(p4);
       setDocuments(docs.documents || []);
-      setB2bAccounts(b2a.accounts || []);
-      setAccountStatuses(b2a.statuses || []);
-      setB2bRequests(b2r.requests || []);
-      setRequestStatuses(b2r.statuses || []);
-      setB2bCommissions(b2c.commissions || []);
-      setB2bStats(b2s);
+
+      // B2B is optional for CRM boot — don't block leads/quotes if routes are not live yet
+      const [b2a, b2r, b2c, b2s] = await Promise.allSettled([
+        fetchB2bAccounts(token, q || undefined),
+        fetchB2bRequests(token),
+        fetchB2bCommissions(token),
+        fetchB2bStats(token),
+      ]);
+      if (b2a.status === 'fulfilled') {
+        setB2bAccounts(b2a.value.accounts || []);
+        setAccountStatuses(b2a.value.statuses || []);
+      } else {
+        setB2bAccounts([]);
+      }
+      if (b2r.status === 'fulfilled') {
+        setB2bRequests(b2r.value.requests || []);
+        setRequestStatuses(b2r.value.statuses || []);
+      } else {
+        setB2bRequests([]);
+      }
+      if (b2c.status === 'fulfilled') {
+        setB2bCommissions(b2c.value.commissions || []);
+      } else {
+        setB2bCommissions([]);
+      }
+      if (b2s.status === 'fulfilled') {
+        setB2bStats(b2s.value);
+      } else {
+        setB2bStats(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CRM');
       setLeads([]);
@@ -1019,6 +1038,16 @@ const LeadsAdmin: React.FC = () => {
                 onChange={(e) => setB2bStaffForm((p) => ({ ...p, email: e.target.value }))}
                 className="rounded-xl border border-slate-200 px-3 py-2.5"
               />
+              <select
+                value={b2bStaffForm.role}
+                onChange={(e) => setB2bStaffForm((p) => ({ ...p, role: e.target.value }))}
+                className="rounded-xl border border-slate-200 px-3 py-2.5"
+              >
+                <option value="BOOKER">BOOKER</option>
+                <option value="MANAGER">MANAGER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="TRAVELLER">TRAVELLER</option>
+              </select>
               <button
                 type="button"
                 className="rounded-xl bg-slate-900 text-white px-4 py-2.5 font-semibold"
@@ -1030,7 +1059,7 @@ const LeadsAdmin: React.FC = () => {
                     role: b2bStaffForm.role,
                   })
                     .then(() => {
-                      setB2bStaffForm({ accountId: '', name: '', email: '', role: 'TRAVELLER' });
+                      setB2bStaffForm({ accountId: '', name: '', email: '', role: 'BOOKER' });
                       return load();
                     })
                     .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
@@ -1131,18 +1160,45 @@ const LeadsAdmin: React.FC = () => {
                         {String(r.title || r.id)} · {String(r.accountId)}
                       </div>
                       <div className="text-slate-600">
-                        {String(r.origin || '—')} → {String(r.destination || '—')} · est.{' '}
-                        {money(Number(r.estimatedCost), 'AED')}
+                        {String(r.origin || '—')} → {String(r.destination || '—')} · budget{' '}
+                        {money(Number(r.budget), String(r.currency || 'AED'))} · est.{' '}
+                        {money(Number(r.estimatedCost), String(r.currency || 'AED'))}
                       </div>
                     </div>
                     <select
                       value={String(r.status)}
                       className="rounded-lg border border-slate-200 px-2 py-1.5"
-                      onChange={(e) =>
-                        void patchB2bRequest(token, String(r.id), { status: e.target.value })
-                          .then(load)
-                          .catch((err) => alert(err instanceof Error ? err.message : 'Failed'))
-                      }
+                      onChange={(e) => {
+                        const status = e.target.value;
+                        void (async () => {
+                          try {
+                            const body: Record<string, unknown> = { status };
+                            if (status === 'APPROVED') {
+                              const hint =
+                                Number(r.estimatedCost) > 0
+                                  ? String(r.estimatedCost)
+                                  : Number(r.budget) > 0
+                                    ? String(r.budget)
+                                    : '';
+                              const raw = window.prompt(
+                                'Estimated cost for credit hold (required for APPROVED)',
+                                hint
+                              );
+                              if (raw == null) return;
+                              const estimatedCost = Number(raw);
+                              if (!(estimatedCost > 0)) {
+                                alert('Enter a positive estimated cost to approve with credit hold.');
+                                return;
+                              }
+                              body.estimatedCost = estimatedCost;
+                            }
+                            await patchB2bRequest(token, String(r.id), body);
+                            await load();
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : 'Failed');
+                          }
+                        })();
+                      }}
                     >
                       {(requestStatuses.length
                         ? requestStatuses

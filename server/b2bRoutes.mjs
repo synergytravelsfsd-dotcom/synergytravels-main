@@ -158,25 +158,34 @@ router.patch('/public/b2b/:token/requests/:id', async (req, res) => {
     const all = await listRequests({ accountId: session.account.id, limit: 500 });
     const existing = all.find((r) => r.id === req.params.id);
     if (!existing) return res.status(404).json({ error: 'Request not found' });
-    // Agents may only move DRAFT/SUBMITTED → MANAGER_REVIEW or cancel; managers APPROVE via note path limited
-    const allowed = ['MANAGER_REVIEW', 'CANCELLED', 'SUBMITTED'];
+
     const status = req.body?.status;
+    const manager = (session.staff || []).find((s) => s.role === 'MANAGER' || s.role === 'ADMIN');
+    const agentAllowed = ['MANAGER_REVIEW', 'CANCELLED', 'SUBMITTED'];
+    const managerAllowed = [...agentAllowed, 'APPROVED', 'REJECTED'];
+    const allowed = manager ? managerAllowed : agentAllowed;
+
     if (status && !allowed.includes(status)) {
-      return res.status(400).json({ error: 'Agents cannot set that status. Synergy/admin completes booking approvals involving credit.' });
+      return res.status(400).json({
+        error: manager
+          ? 'Invalid status for manager portal update.'
+          : 'Agents cannot set that status. Synergy/admin completes booking approvals involving credit.',
+      });
     }
+
     const patch = {
       status,
       managerNote: req.body?.managerNote,
     };
-    // Manager role staff can approve within credit if role is MANAGER
-    const staffId = session.staff?.[0]?.id;
-    const manager = (session.staff || []).find((s) => s.role === 'MANAGER' || s.role === 'ADMIN');
     if (manager && (status === 'APPROVED' || status === 'REJECTED')) {
-      patch.status = status;
       if (req.body?.estimatedCost != null) patch.estimatedCost = req.body.estimatedCost;
+      else if (status === 'APPROVED' && !existing.estimatedCost && existing.budget) {
+        patch.estimatedCost = existing.budget;
+      }
     }
+
     const request = await updateTravelRequest(req.params.id, patch);
-    res.json({ ok: true, request, staffId });
+    res.json({ ok: true, request });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message || 'Unable to update request' });
   }
