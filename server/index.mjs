@@ -8,6 +8,7 @@ import leadsRoutes from './leadsRoutes.mjs';
 import salesRoutes from './salesRoutes.mjs';
 import travelRoutes from './travelRoutes.mjs';
 import portalRoutes from './portalRoutes.mjs';
+import aiRoutes from './aiRoutes.mjs';
 import { hasDatabase, ensureSchema } from './db.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -53,6 +54,7 @@ app.use('/api/v1', leadsRoutes);
 app.use('/api/v1', salesRoutes);
 app.use('/api/v1', travelRoutes);
 app.use('/api/v1', portalRoutes);
+app.use('/api/v1', aiRoutes);
 
 function toMinorUnits(amount) {
   return Math.max(50, Math.round(Number(amount) * 100));
@@ -346,6 +348,7 @@ app.get('/api/health', async (_req, res) => {
     sales: true,
     travel: true,
     portal: true,
+    ai: true,
     crmConfigured: Boolean(process.env.CRM_ADMIN_TOKEN),
     database: hasDatabase() ? (dbOk ? 'postgres' : 'error') : 'file',
     runtime: process.env.VERCEL ? 'vercel' : 'node',

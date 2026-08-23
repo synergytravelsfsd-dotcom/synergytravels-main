@@ -1,6 +1,7 @@
 import React from 'react';
 import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import BookingEnquiryForm from './BookingEnquiryForm';
+import AiConsultant from './AiConsultant';
 import { BRAND_NAME, CONTACT, getWhatsAppLink } from '../constants/contact';
 import { TRAVEL_LOCATION } from '../travel/config';
 import { trackEvent } from '../lib/analytics';
@@ -74,6 +75,10 @@ const ContactPage: React.FC = () => {
             analyticsEvent="booking_request"
           />
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <AiConsultant />
       </div>
     </div>
   );

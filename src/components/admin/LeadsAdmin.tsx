@@ -28,6 +28,7 @@ import {
   portalPublicUrl,
   createDocument,
 } from '../../lib/portalApi';
+import { aiAssistQuote, aiFollowUps, aiInsights, aiQualifyLead, fetchAiStatus } from '../../lib/aiApi';
 import { getWhatsAppLink } from '../../constants/contact';
 
 type Lead = {
@@ -63,7 +64,7 @@ type Quote = {
   createdAt: string;
 };
 
-type Tab = 'leads' | 'quotes' | 'followups' | 'customers' | 'visa' | 'payments' | 'portal';
+type Tab = 'leads' | 'quotes' | 'followups' | 'customers' | 'visa' | 'payments' | 'portal' | 'ai';
 
 const TOKEN_KEY = 'synergy_crm_token_v1';
 
@@ -97,6 +98,9 @@ const LeadsAdmin: React.FC = () => {
     passportExpiry: '',
     passportCountry: '',
   });
+  const [aiOut, setAiOut] = useState<Record<string, unknown> | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMode, setAiMode] = useState('');
   const [statuses, setStatuses] = useState<string[]>([]);
   const [quoteStatuses, setQuoteStatuses] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
@@ -300,6 +304,7 @@ const LeadsAdmin: React.FC = () => {
               ['visa', 'Visa'],
               ['payments', 'Payments'],
               ['portal', 'Portal'],
+              ['ai', 'AI'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -836,6 +841,139 @@ const LeadsAdmin: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {tab === 'ai' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+              AI assists staff only — humans confirm quotes, payments and visa filings. Optional{' '}
+              <code className="text-xs">OPENAI_API_KEY</code> upgrades wording; heuristics always work.
+              {aiMode ? ` Current mode: ${aiMode}.` : ''}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={aiBusy}
+                className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                onClick={() =>
+                  void (async () => {
+                    setAiBusy(true);
+                    try {
+                      const st = await fetchAiStatus();
+                      setAiMode(String(st.mode || ''));
+                      const data = await aiInsights(token, {
+                        stats: {
+                          leadsTotal: stats?.total,
+                          hot: stats?.hot,
+                          quotesOpen: sales?.quotesOpen,
+                          pipelineSell: sales?.pipelineSell,
+                          visaOpen: phase4?.visaOpen,
+                          paymentsPending: phase4?.paymentsPending,
+                        },
+                      });
+                      setAiOut(data);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'AI failed');
+                    } finally {
+                      setAiBusy(false);
+                    }
+                  })()
+                }
+              >
+                Synergy IQ insights
+              </button>
+              <button
+                type="button"
+                disabled={aiBusy || leads.length === 0}
+                className="rounded-xl bg-orange-600 text-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                onClick={() =>
+                  void (async () => {
+                    setAiBusy(true);
+                    try {
+                      const lead = leads[0];
+                      const data = await aiQualifyLead(token, {
+                        name: lead.name,
+                        service: lead.service,
+                        origin: lead.payload?.origin,
+                        destination: lead.payload?.destination,
+                        departDate: lead.payload?.departDate,
+                        budget: lead.payload?.budget,
+                        phone: lead.phone,
+                        email: lead.email,
+                        message: lead.notes,
+                      });
+                      setAiOut({ ...data, leadId: lead.id });
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'AI failed');
+                    } finally {
+                      setAiBusy(false);
+                    }
+                  })()
+                }
+              >
+                Qualify top lead
+              </button>
+              <button
+                type="button"
+                disabled={aiBusy || quotes.length === 0}
+                className="rounded-xl bg-sky-700 text-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                onClick={() =>
+                  void (async () => {
+                    setAiBusy(true);
+                    try {
+                      const quote = quotes[0];
+                      const data = await aiAssistQuote(token, {
+                        quoteId: quote.id,
+                        title: quote.title,
+                        sellTotal: quote.sellTotal,
+                        costTotal: quote.costTotal,
+                        depositAmount: quote.depositAmount,
+                        currency: quote.currency,
+                      });
+                      setAiOut({ ...data, quoteId: quote.id });
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'AI failed');
+                    } finally {
+                      setAiBusy(false);
+                    }
+                  })()
+                }
+              >
+                Assist latest quote
+              </button>
+              <button
+                type="button"
+                disabled={aiBusy}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                onClick={() =>
+                  void (async () => {
+                    setAiBusy(true);
+                    try {
+                      const data = await aiFollowUps(token, {
+                        items: [
+                          ...leads.slice(0, 10).map((l) => ({ id: l.id, status: l.status })),
+                          ...quotes.slice(0, 10).map((q) => ({ id: q.id, status: q.status })),
+                          ...visaCases.slice(0, 10).map((c) => ({ id: c.id, status: c.status })),
+                        ],
+                      });
+                      setAiOut(data);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : 'AI failed');
+                    } finally {
+                      setAiBusy(false);
+                    }
+                  })()
+                }
+              >
+                Follow-up queue
+              </button>
+            </div>
+            {aiOut && (
+              <pre className="rounded-2xl border border-slate-200 bg-white p-4 text-xs overflow-auto max-h-[480px]">
+                {JSON.stringify(aiOut, null, 2)}
+              </pre>
+            )}
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import { findTripByTitle, LEGACY_PACKAGE_ID_MAP, navigateToTrip } from '../data/
 import { TRIP_IMAGES } from '../data/tripImages';
 import TripInquiryForm from './TripInquiryForm';
 import HolidayBuilder from './HolidayBuilder';
+import AiConsultant from './AiConsultant';
 
 function openTripDetail(pkg: { id: number; title: string }) {
   const trip =
@@ -557,7 +558,8 @@ const TravelPackages: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-12 lg:mt-16 max-w-4xl mx-auto">
+        <div className="mt-12 lg:mt-16 max-w-4xl mx-auto space-y-8">
+          <AiConsultant />
           <HolidayBuilder />
         </div>
 
