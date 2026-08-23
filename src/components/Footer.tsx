@@ -22,6 +22,9 @@ export const Footer: React.FC<FooterProps> = ({ onLogoClick }) => {
     { name: 'Travel Insurance', pageId: 'insurance' },
     { name: 'Umrah', pageId: 'umrah' },
     { name: 'Corporate Travel', pageId: 'corporate' },
+    { name: 'Destinations', pageId: 'destinations' },
+    { name: 'Deals', pageId: 'deals' },
+    { name: 'Referrals', pageId: 'referrals' },
     { name: 'Contact Us', pageId: 'contact' },
   ];
 

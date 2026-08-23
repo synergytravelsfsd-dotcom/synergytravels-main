@@ -21,6 +21,10 @@ export const APP_PAGES = [
   'admin',
   'quote',
   'portal',
+  'destinations',
+  'destination',
+  'deals',
+  'referrals',
   'privacy-policy',
   'terms-and-conditions',
   'cookie-policy',
@@ -98,6 +102,12 @@ export function resolveNavigateTarget(raw: string): AppPage {
     crm: 'admin',
     quote: 'quote',
     portal: 'portal',
+    destinations: 'destinations',
+    destination: 'destination',
+    deals: 'deals',
+    offers: 'deals',
+    referrals: 'referrals',
+    refer: 'referrals',
     compare: 'compare',
     metasearch: 'compare',
     privacy: 'privacy-policy',
@@ -115,6 +125,7 @@ export function buildPageHash(page: AppPage, tripId?: string | null): string {
   if (page === 'trip-detail' && tripId) return `#/trip-detail/${encodeURIComponent(tripId)}`;
   if (page === 'quote' && tripId) return `#/quote/${encodeURIComponent(tripId)}`;
   if (page === 'portal' && tripId) return `#/portal/${encodeURIComponent(tripId)}`;
+  if (page === 'destination' && tripId) return `#/destination/${encodeURIComponent(tripId)}`;
   return `#/${page}`;
 }
 
@@ -123,8 +134,11 @@ export function parsePageHash(hash: string): { page: AppPage; tripId?: string } 
   if (!raw) return { page: 'home' };
   const [segment, ...rest] = raw.split('/');
   const page = resolveNavigateTarget(segment || 'home');
-  if ((page === 'trip-detail' || page === 'quote' || page === 'portal') && rest[0]) {
-    return { page, tripId: decodeURIComponent(rest[0]) };
+  if (
+    (page === 'trip-detail' || page === 'quote' || page === 'portal' || page === 'destination') &&
+    rest[0]
+  ) {
+    return { page, tripId: decodeURIComponent(rest[0].split('?')[0]) };
   }
   return { page };
 }
@@ -144,6 +158,15 @@ export function navigateToAppPage(
     window.dispatchEvent(
       new CustomEvent('navigateToPage', {
         detail: { page: 'trip-detail', tripId: extras.tripId },
+      })
+    );
+    return;
+  }
+
+  if (resolved === 'destination' && extras?.tripId) {
+    window.dispatchEvent(
+      new CustomEvent('navigateToPage', {
+        detail: { page: 'destination', tripId: extras.tripId },
       })
     );
     return;

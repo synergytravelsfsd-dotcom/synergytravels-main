@@ -20,6 +20,8 @@ import LegalPage from './components/LegalPage';
 import LeadsAdmin from './components/admin/LeadsAdmin';
 import QuotePublic from './components/QuotePublic';
 import CustomerPortal from './components/CustomerPortal';
+import { DestinationsIndex, DestinationPage } from './components/DestinationsPage';
+import { DealsPage, ReferralsPage } from './components/GrowthPages';
 import WhatsAppFab from './components/WhatsAppFab';
 import CompareResults from './components/metasearch/CompareResults';
 import VerticalHubPage from './components/metasearch/VerticalHubPage';
@@ -114,6 +116,14 @@ function App() {
         return;
       }
 
+      if (resolved === 'destination') {
+        setSelectedTripId(tripId || selectedTripId);
+        setCurrentPage('destination');
+        syncHash('destination', tripId || selectedTripId);
+        scrollTop();
+        return;
+      }
+
       if (
         resolved !== 'checkout' &&
         resolved !== 'compare' &&
@@ -152,11 +162,17 @@ function App() {
         setCurrentPage('portal');
         return;
       }
+      if (parsed.page === 'destination' && parsed.tripId) {
+        setSelectedTripId(parsed.tripId);
+        setCurrentPage('destination');
+        return;
+      }
       setCurrentPage(parsed.page);
       if (
         parsed.page !== 'trip-detail' &&
         parsed.page !== 'quote' &&
         parsed.page !== 'portal' &&
+        parsed.page !== 'destination' &&
         parsed.page !== 'checkout' &&
         parsed.page !== 'compare'
       ) {
@@ -187,6 +203,11 @@ function App() {
           currentPage === 'trip-detail' || currentPage === 'checkout' ? returnPage : currentPage
         );
         handlePageChange('trip-detail', detail.tripId);
+        return;
+      }
+
+      if (detail.page === 'destination' && detail.tripId) {
+        handlePageChange('destination', detail.tripId);
         return;
       }
 
@@ -235,6 +256,14 @@ function App() {
         return <VerticalHubPage pageId={currentPage} />;
       case 'contact':
         return <ContactPage />;
+      case 'destinations':
+        return <DestinationsIndex />;
+      case 'destination':
+        return selectedTripId ? <DestinationPage slug={selectedTripId} /> : <DestinationsIndex />;
+      case 'deals':
+        return <DealsPage />;
+      case 'referrals':
+        return <ReferralsPage />;
       case 'admin':
         return <LeadsAdmin />;
       case 'quote':

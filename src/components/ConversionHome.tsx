@@ -360,6 +360,8 @@ const ConversionHome: React.FC = () => {
               { title: 'Car Rental', text: 'Request car hire for your destination.', page: 'cars', cta: 'Get a Quote' },
               { title: 'Cruises', text: 'Enquire about cruise holidays.', page: 'cruises', cta: 'Get a Quote' },
               { title: 'Family Holidays', text: 'Family-friendly packages and planning.', page: 'tours', cta: 'Plan My Trip' },
+              { title: 'Destinations', text: 'Guides for Dubai, Istanbul, London, Maldives, Umrah and more.', page: 'destinations', cta: 'Explore' },
+              { title: 'Deals', text: 'Featured offer themes — enquire for a confirmed quote.', page: 'deals', cta: 'View deals' },
               { title: 'WhatsApp Us', text: 'Chat with our team for fast answers.', page: 'contact', cta: 'WhatsApp Us' },
             ].map((item) => (
               <button
