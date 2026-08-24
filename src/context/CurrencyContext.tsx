@@ -16,16 +16,16 @@ interface CurrencyContextType {
 }
 
 const currencies: Currency[] = [
+  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', rate: 3.67 },
   { code: 'GBP', symbol: '£', name: 'British Pound', rate: 0.79 },
   { code: 'USD', symbol: '$', name: 'US Dollar', rate: 1 },
   { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
-  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', rate: 3.67 },
   { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal', rate: 3.75 },
   { code: 'PKR', symbol: '₨', name: 'Pakistani Rupee', rate: 278 },
 ];
 
 const DEFAULT_CURRENCY =
-  currencies.find((c) => c.code === 'GBP') ?? currencies[0];
+  currencies.find((c) => c.code === 'AED') ?? currencies[0];
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
